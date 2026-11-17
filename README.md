@@ -1,6 +1,7 @@
 # BiOPAL: $\textcolor{blue}{\textsf{Bi}}\textsf{level }\textcolor{blue}{\textsf{OP}}\textsf{timizer with an }\textcolor{blue}{\textsf{A}}\textsf{gent in the }\textcolor{blue}{\textsf{L}}\textsf{oop}$
 
-Bilevel Optimizer with an Agent in the Loop
+Bilevel Optimizer with an Agent in the Loop for Sequence Prediction. 
+Based on [Reactive Optimizers](https://arxiv.org/abs/2610.33826) ([Bai et al., 2026](#references)).
  
 ## Installation
  
@@ -8,6 +9,7 @@ Click a system to expand its instructions.
  
 <details>
 <summary><b>lambda13</b></summary>
+
 ```bash
 # create conda env
 conda create -n biopal python=3.11 pip -y
@@ -38,3 +40,15 @@ opal doctor
 TODO
  
 </details>
+
+
+## References
+
+```bash
+@article{bai2026reactive,
+  title={Reactive Optimizers},
+  author={Bai, Xingjian and Liang, Jia-Hao and Teoh, Jayden and Sitzmann, Vincent},
+  journal={arXiv preprint arXiv:2610.33826},
+  year={2026}
+}
+```
