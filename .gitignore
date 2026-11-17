@@ -1,0 +1,10 @@
+# experiments
+/runs/
+/opal_runs/
+/*.py
+
+# caches/checkpoints
+__pycache__/
+_pycache/
+checkpoints/
+*.pt
