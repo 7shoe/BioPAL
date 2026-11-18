@@ -1,0 +1,30 @@
+# RNA foundation models: multimolecule (rnafm, splicebert, rinalmo-micro).
+# multimolecule leaves torch/transformers unpinned, and 0.2.3 needs
+# `transformers.initialization`, a v5-only module - hence transformers 5.9.0
+# here, unlike the 4.57.1 the other envs pin (bio-rna serves no model that
+# needs the 4.5x-era remote code, so the divergence is safe).
+# opal-optimizer MUST be installed here, in the same pip resolve as the hard
+# torch pin: installed separately afterwards, pip may upgrade torch past 2.9.0
+# (opal only declares torch>=2.5). Same rule for any later opal upgrade:
+#   pip install -U opal-optimizer torch==2.9.0 transformers==5.9.0
+# After creation, verify with: conda run -n bio-rna opal doctor
+name: bio-rna
+channels:
+  - conda-forge
+dependencies:
+  - python=3.11
+  - pip
+  # no sudo on lambda13: opal's agent sandbox binaries come from conda-forge
+  - bubblewrap
+  - socat
+  - pip:
+      - torch==2.9.0
+      - transformers==5.9.0
+      - multimolecule==0.2.3
+      - accelerate
+      - pandas
+      - pyarrow
+      - pytest
+      - scikit-learn==1.9.1   # experiments/finetune.py metrics (brings scipy)
+      - scipy==1.17.1
+      - opal-optimizer==0.3.10

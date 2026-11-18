@@ -1,0 +1,34 @@
+# Candidate replacement for the `biopal` env (which stays untouched until this
+# one proves itself): same model set - ntv2_50m, esm2 t6/t12/t30/t33,
+# gena_lm_bert_base, hyenadna_tiny_1k, ankh_base, prot_t5_xl_half - on the
+# modern stack shared with bio-rna/bio-mamba (torch 2.9.0, transformers 4.57.1).
+# The open question this env answers: does the trust_remote_code trio
+# (ntv2, gena-lm, hyenadna) still load under transformers 4.57.1, or was the
+# old 4.44.2 pin load-bearing? Run the smoke block in envs/README.md to find out.
+# sentencepiece: T5-family tokenizers (prot_t5, ankh). einops: remote-code insurance.
+# opal-optimizer MUST stay in this same pip resolve as the hard torch pin
+# (opal only declares torch>=2.5; a separate install may upgrade torch).
+# Upgrade rule: pip install -U opal-optimizer torch==2.9.0 transformers==4.57.1
+# After creation, verify with: conda run -n biopal-v2 opal doctor
+name: biopal-v2
+channels:
+  - conda-forge
+dependencies:
+  - python=3.11
+  - pip
+  # no sudo on lambda13: opal's agent sandbox binaries come from conda-forge
+  - bubblewrap
+  - socat
+  - pip:
+      - torch==2.9.0
+      - transformers==4.57.1
+      - sentencepiece
+      - protobuf
+      - einops==0.8.1
+      - accelerate
+      - pandas
+      - pyarrow
+      - pytest
+      - scikit-learn==1.9.1   # experiments/finetune.py metrics (brings scipy)
+      - scipy==1.17.1
+      - opal-optimizer==0.3.10

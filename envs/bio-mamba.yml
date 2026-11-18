@@ -1,0 +1,35 @@
+# Mamba-based DNA backbones: caduceus_ps_131k, plant_caduceus_l20.
+# torch>=2.6 is required so transformers will torch.load PlantCaduceus' bin-only
+# checkpoint; torch 2.9.0 bundles triton 3.5.0, which mamba-ssm 2.3.2 requires.
+# python 3.11: matches the cp311 prebuilt wheels for mamba-ssm/causal-conv1d.
+#
+# STAGE 2 (required): mamba-ssm and causal-conv1d cannot live in this yml —
+# their setup.py imports torch at build time, which pip's build isolation
+# hides. After `conda env create`, run inside the activated env:
+#   pip install --no-build-isolation causal-conv1d==1.7.0 mamba-ssm==2.3.2.post1
+# (their setup.py then fetches the prebuilt cu12/torch2.9/cp311 wheel from
+# GitHub releases; nvcc 12.4 at /usr/local/cuda-12.4 is the source-build
+# fallback if the download path fails.)
+#
+# opal-optimizer MUST be installed here, in the same pip resolve as the hard
+# torch pin (opal only declares torch>=2.5; a separate install may upgrade
+# torch). Upgrade rule: pip install -U opal-optimizer torch==2.9.0 transformers==4.57.1
+# After creation, verify with: conda run -n bio-mamba opal doctor
+name: bio-mamba
+channels:
+  - conda-forge
+dependencies:
+  - python=3.11
+  - pip
+  # no sudo on lambda13: opal's agent sandbox binaries come from conda-forge
+  - bubblewrap
+  - socat
+  - pip:
+      - torch==2.9.0
+      - transformers==4.57.1
+      - einops==0.8.1
+      - accelerate
+      - pandas
+      - pyarrow
+      - pytest
+      - opal-optimizer==0.3.10
