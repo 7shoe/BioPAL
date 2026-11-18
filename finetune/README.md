@@ -3,7 +3,7 @@
 ## TL;DR: 
 Fine-tune a registered foundation model (bio LM) on a curated task via
 - fixed hyperparameters, or 
-- HPO model (hyper-parameter optimized; to do), or
+- HPO model (hyper-parameter optimized; `hpo.py`), or
 - OPAL (reactive optimizer), or
 - OPAL + bio features (to do), or
 - BiOPAL (to do: agentic wrapper).
@@ -108,9 +108,26 @@ DNABERT-2 triton shim, keep-mode opal.wrap, and plain↔keep `--compare`
 parity PASS under `--det strict`. Needs `scikit-learn`/`scipy` (added to both
 env ymls 2026-11-18).
 
+## `hpo.py` — hyperparameter optimization (RS or BO)
+
+Optuna over `finetune.py --no-test` runs, scored by best validation loss. Searches
+lr (log 1e-5..1e-3), weight decay (0..0.1), warmup fraction (0..0.2); trial 0 is
+the default recipe. `--mode RS` = random search, `--mode BO` = Gaussian-process
+BO (after max(3, n_trials // 4) random startup trials). Unknown flags pass
+through to `finetune.py`. Rerunning the same command resumes `<out>/study.db`.
+
+```bash
+conda run -n biopal-v2 python hpo.py \
+    --model ntv2_50m --task nt_tasks_official_splice_sites_donors \
+    --mode BO --n_trials 12 --out runs/hpo_bo_ntv2_donors \
+    --epochs 2
+```
+
+Outputs: `trials/trial_NNN/` (finetune runs), `logs/`, `hpo_result.json` (all
+trials, best, and the `finetune.py` command that scores the winner once on test).
+
 ## To do
 
-- small HPO sweep driver (the "few HPO steps" before fixing hyperparameters)
 - OPAL with bio features; BiOPAL (agentic wrapper around the bilevel loop)
 - `results/` aggregation across runs
 

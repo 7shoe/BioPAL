@@ -128,6 +128,8 @@ def main():
                         "ops (required for --compare parity), warn only warns")
     p.add_argument("--cpu", action="store_true",
                    help="run on CPU (smoke tests; real runs need CUDA)")
+    p.add_argument("--no-test", action="store_true",
+                   help="skip the test evaluation (HPO candidates select on validation only)")
     args = p.parse_args()
 
     models, tasks = registries()
@@ -409,7 +411,7 @@ def main():
         except importlib.metadata.PackageNotFoundError:
             pass
     metadata = dict(recipe=recipe, versions=versions, mode=args.mode,
-                    budget=args.budget, data_sha256=data_hash,
+                    budget=args.budget, no_test=args.no_test, data_sha256=data_hash,
                     initial_sha256=initial_hash, hostname=socket.gethostname(),
                     conda_env=conda_env, device=device,
                     gpu=torch.cuda.get_device_name(0) if device != "cpu" else None,
@@ -504,7 +506,8 @@ def main():
     if not args.max_steps:
         net.load_state_dict(torch.load(args.out / "best.pt", map_location=device,
                                        weights_only=True))
-        test = evaluate("test")
+        if not args.no_test:
+            test = evaluate("test")
         tok.save_pretrained(args.out / "tokenizer")
     result = dict(metadata, steps=step, final_sha256=final_hash,
                   best_epoch=best_epoch, best_validation=best_val, test=test,
