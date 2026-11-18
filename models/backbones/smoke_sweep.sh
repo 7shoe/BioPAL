@@ -2,7 +2,7 @@
 # Smoke-test every runnable backbone on one GPU and record the results.
 #   models/backbones/smoke_sweep.sh <gpu> [model ...]
 # Models come from models/backbones/models.yaml (audit registry) joined with
-# experiments/backbone_flags.py (env + quirks). Models whose conda env does not
+# finetune/backbone_flags.py (env + quirks). Models whose conda env does not
 # exist (e.g. bio-mamba, deferred) are skipped. Writes
 # models/backbones/model_smoke.yaml; exit code 1 if any model fails.
 set -u
@@ -15,7 +15,7 @@ out=models/backbones/model_smoke.yaml
 # one row per model: name env repo revision modality cache trust block_triton pad_multiple
 rows=$(conda run -n biopal-v2 python -c '
 import platform, sys, yaml
-sys.path.insert(0, "experiments")
+sys.path.insert(0, "finetune")
 from backbone_flags import FLAGS
 reg = yaml.safe_load(open("models/backbones/models.yaml"))["models"]
 paths = yaml.safe_load(open("paths/paths.yaml"))
