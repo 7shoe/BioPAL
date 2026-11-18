@@ -1,0 +1,18 @@
+
+SOURCE        STATUS      FAIL/UNRES/DOC/DESIGN findings
+_nt_tasks     OK          0
+_cds          OK          0
+_rfam         OK          2
+    [DOC/integrity] _rfam/README.md: size 11643 != manifest 8889 (non-payload file)
+    [DOC/integrity] manifest README.md sha256 equals CURRENT upstream README -> local README.md was edited locally after download (notes prepended); sequence payload unaf
+_fish_gue     OK          0
+_gen_lrb      UNRESOLVED  3
+    [DESIGN/coverage] train splits are deliberate subsamples: /home/csiebenschuh/Projects/BinarySignature/dsets/pipelines/gen_lrb/downloader.py:104-114 shuffles each full s
+    [DESIGN/preservation] array-valued labels reduced to scalar nanmean at download: /home/csiebenschuh/Projects/BinarySignature/dsets/pipelines/gen_lrb/downloader.py:120-126; 
+    [UNRESOLVED/coverage] regulatory_element_enhancer/train: loader n_source 1914565 vs README count 1914575 (diff 10); cannot arbitrate without rebuilding the split
+_plant_gen    OK          0
+_rna_dst      OK          0
+
+DESIGN findings are documented downloader behavior, not defects. DOC findings are
+documentation-only. Count agreement never proves content identity; byte-identity is
+claimed only where sha256/git-blob evidence is cited. Non-HF dumps are out of scope.

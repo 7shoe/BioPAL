@@ -1,0 +1,167 @@
+{
+  "note": "exact sequence overlap between official train and official test, per task; no rows removed or altered",
+  "tasks": {
+    "H2AFZ": {
+      "train_rows": 30000,
+      "test_rows": 3000,
+      "train_task_col_ok": true,
+      "train_unique_seqs": 29853,
+      "test_unique_seqs": 2960,
+      "overlap_seqs": 0,
+      "overlap_label_conflicts": 0
+    },
+    "H3K27ac": {
+      "train_rows": 30000,
+      "test_rows": 1616,
+      "train_task_col_ok": true,
+      "train_unique_seqs": 29885,
+      "test_unique_seqs": 1605,
+      "overlap_seqs": 0,
+      "overlap_label_conflicts": 0
+    },
+    "H3K27me3": {
+      "train_rows": 30000,
+      "test_rows": 3000,
+      "train_task_col_ok": true,
+      "train_unique_seqs": 29871,
+      "test_unique_seqs": 2947,
+      "overlap_seqs": 0,
+      "overlap_label_conflicts": 0
+    },
+    "H3K36me3": {
+      "train_rows": 30000,
+      "test_rows": 3000,
+      "train_task_col_ok": true,
+      "train_unique_seqs": 29885,
+      "test_unique_seqs": 2960,
+      "overlap_seqs": 0,
+      "overlap_label_conflicts": 0
+    },
+    "H3K4me1": {
+      "train_rows": 30000,
+      "test_rows": 3000,
+      "train_task_col_ok": true,
+      "train_unique_seqs": 29877,
+      "test_unique_seqs": 2967,
+      "overlap_seqs": 0,
+      "overlap_label_conflicts": 0
+    },
+    "H3K4me2": {
+      "train_rows": 30000,
+      "test_rows": 2138,
+      "train_task_col_ok": true,
+      "train_unique_seqs": 29898,
+      "test_unique_seqs": 2114,
+      "overlap_seqs": 0,
+      "overlap_label_conflicts": 0
+    },
+    "H3K4me3": {
+      "train_rows": 17468,
+      "test_rows": 776,
+      "train_task_col_ok": true,
+      "train_unique_seqs": 17423,
+      "test_unique_seqs": 773,
+      "overlap_seqs": 0,
+      "overlap_label_conflicts": 0
+    },
+    "H3K9ac": {
+      "train_rows": 23274,
+      "test_rows": 1004,
+      "train_task_col_ok": true,
+      "train_unique_seqs": 23203,
+      "test_unique_seqs": 1000,
+      "overlap_seqs": 0,
+      "overlap_label_conflicts": 0
+    },
+    "H3K9me3": {
+      "train_rows": 27438,
+      "test_rows": 850,
+      "train_task_col_ok": true,
+      "train_unique_seqs": 27332,
+      "test_unique_seqs": 845,
+      "overlap_seqs": 0,
+      "overlap_label_conflicts": 0
+    },
+    "H4K20me1": {
+      "train_rows": 30000,
+      "test_rows": 2270,
+      "train_task_col_ok": true,
+      "train_unique_seqs": 29862,
+      "test_unique_seqs": 2242,
+      "overlap_seqs": 0,
+      "overlap_label_conflicts": 0
+    },
+    "enhancers": {
+      "train_rows": 30000,
+      "test_rows": 3000,
+      "train_task_col_ok": true,
+      "train_unique_seqs": 29803,
+      "test_unique_seqs": 2943,
+      "overlap_seqs": 0,
+      "overlap_label_conflicts": 0
+    },
+    "enhancers_types": {
+      "train_rows": 30000,
+      "test_rows": 3000,
+      "train_task_col_ok": true,
+      "train_unique_seqs": 29803,
+      "test_unique_seqs": 2943,
+      "overlap_seqs": 0,
+      "overlap_label_conflicts": 0
+    },
+    "promoter_all": {
+      "train_rows": 30000,
+      "test_rows": 1584,
+      "train_task_col_ok": true,
+      "train_unique_seqs": 29872,
+      "test_unique_seqs": 1571,
+      "overlap_seqs": 0,
+      "overlap_label_conflicts": 0
+    },
+    "promoter_no_tata": {
+      "train_rows": 30000,
+      "test_rows": 1372,
+      "train_task_col_ok": true,
+      "train_unique_seqs": 29872,
+      "test_unique_seqs": 1363,
+      "overlap_seqs": 0,
+      "overlap_label_conflicts": 0
+    },
+    "promoter_tata": {
+      "train_rows": 5062,
+      "test_rows": 212,
+      "train_task_col_ok": true,
+      "train_unique_seqs": 5059,
+      "test_unique_seqs": 212,
+      "overlap_seqs": 0,
+      "overlap_label_conflicts": 0
+    },
+    "splice_sites_acceptors": {
+      "train_rows": 30000,
+      "test_rows": 3000,
+      "train_task_col_ok": true,
+      "train_unique_seqs": 29858,
+      "test_unique_seqs": 2964,
+      "overlap_seqs": 0,
+      "overlap_label_conflicts": 0
+    },
+    "splice_sites_all": {
+      "train_rows": 30000,
+      "test_rows": 3000,
+      "train_task_col_ok": true,
+      "train_unique_seqs": 29937,
+      "test_unique_seqs": 2976,
+      "overlap_seqs": 0,
+      "overlap_label_conflicts": 0
+    },
+    "splice_sites_donors": {
+      "train_rows": 30000,
+      "test_rows": 3000,
+      "train_task_col_ok": true,
+      "train_unique_seqs": 29840,
+      "test_unique_seqs": 2957,
+      "overlap_seqs": 0,
+      "overlap_label_conflicts": 0
+    }
+  }
+}

@@ -1,0 +1,331 @@
+# Task registry: curated datasets that passed audit_tasks.py
+# Generated on 2026-11-17 (machine lambda13); do not edit -
+# regenerate with: python audit_tasks.py --yaml tasks.yaml
+# Dataset dirs live under the machine's curated_base in paths/paths.yaml.
+tasks:
+  cds_beta_lactamase_complete:
+    modality: protein
+    source: cds
+    tasks:
+    - classification
+    - regression
+  cds_beta_lactamase_unique:
+    modality: protein
+    source: cds
+    tasks:
+    - classification
+    - regression
+  cds_fluorescence:
+    modality: protein
+    source: cds
+    tasks:
+    - classification
+    - regression
+  cds_melting_point:
+    modality: protein
+    source: cds
+    tasks:
+    - classification
+    - regression
+  cds_stability:
+    modality: protein
+    source: cds
+    tasks:
+    - classification
+    - regression
+  cripsrCas9:
+    modality: dna
+    source: crispr_cas9
+    tasks:
+    - classification
+    - regression
+  fish_gue_core_promoter:
+    modality: dna
+    source: fish_gue
+    tasks:
+    - classification
+    - regression
+  fish_gue_core_promoter_non_tata:
+    modality: dna
+    source: fish_gue
+    tasks:
+    - classification
+    - regression
+  fish_gue_core_promoter_tata:
+    modality: dna
+    source: fish_gue
+    tasks:
+    - classification
+    - regression
+  fish_gue_ctcf:
+    modality: dna
+    source: fish_gue
+    tasks:
+    - classification
+    - regression
+  fish_gue_pou5f1:
+    modality: dna
+    source: fish_gue
+    tasks:
+    - classification
+    - regression
+  fish_gue_promoter:
+    modality: dna
+    source: fish_gue
+    tasks:
+    - classification
+    - regression
+  fish_gue_sox2:
+    modality: dna
+    source: fish_gue
+    tasks:
+    - classification
+    - regression
+  gen_lrb_bulk_rna_expression:
+    modality: dna
+    source: gen_lrb
+    tasks:
+    - regression
+  gen_lrb_cage_prediction:
+    modality: dna
+    source: gen_lrb
+    tasks:
+    - regression
+  gen_lrb_regulatory_element_enhancer:
+    modality: dna
+    source: gen_lrb
+    tasks:
+    - classification
+    - regression
+  nt_tasks_official_h3k27ac:
+    modality: dna
+    source: nt_tasks
+    tasks:
+    - classification
+  nt_tasks_official_h3k9me3:
+    modality: dna
+    source: nt_tasks
+    tasks:
+    - classification
+  nt_tasks_official_splice_sites_acceptors:
+    modality: dna
+    source: nt_tasks
+    tasks:
+    - classification
+  nt_tasks_official_splice_sites_all:
+    modality: dna
+    source: nt_tasks
+    tasks:
+    - classification
+  nt_tasks_official_splice_sites_donors:
+    modality: dna
+    source: nt_tasks
+    tasks:
+    - classification
+  plant_gen_poly_a_arabidopsis_thaliana:
+    modality: dna
+    source: plant_gen
+    tasks:
+    - classification
+    - regression
+  plant_gen_splicing_arabidopsis_thaliana_acceptor:
+    modality: dna
+    source: plant_gen
+    tasks:
+    - classification
+    - regression
+  plant_gen_splicing_arabidopsis_thaliana_donor:
+    modality: dna
+    source: plant_gen
+    tasks:
+    - classification
+    - regression
+  proteingym_blat_deng_resistance:
+    modality: protein
+    source: proteingym
+    tasks:
+    - regression
+  proteingym_blat_stiffler_resistance:
+    modality: protein
+    source: proteingym
+    tasks:
+    - regression
+  proteingym_brca1_function:
+    modality: protein
+    source: proteingym
+    tasks:
+    - regression
+  proteingym_gfp_fluorescence:
+    modality: protein
+    source: proteingym
+    tasks:
+    - regression
+  proteingym_hsp82_flynn:
+    modality: protein
+    source: proteingym
+    tasks:
+    - regression
+  proteingym_hsp82_mishra:
+    modality: protein
+    source: proteingym
+    tasks:
+    - regression
+  proteingym_kcne1_expression:
+    modality: protein
+    source: proteingym
+    tasks:
+    - regression
+  proteingym_kcne1_function:
+    modality: protein
+    source: proteingym
+    tasks:
+    - regression
+  proteingym_kcnj2_function:
+    modality: protein
+    source: proteingym
+    tasks:
+    - regression
+  proteingym_kcnj2_surface:
+    modality: protein
+    source: proteingym
+    tasks:
+    - regression
+  proteingym_p53_null_etoposide:
+    modality: protein
+    source: proteingym
+    tasks:
+    - regression
+  proteingym_p53_null_nutlin:
+    modality: protein
+    source: proteingym
+    tasks:
+    - regression
+  proteingym_p53_wt_nutlin:
+    modality: protein
+    source: proteingym
+    tasks:
+    - regression
+  proteingym_pten_mighell_function:
+    modality: protein
+    source: proteingym
+    tasks:
+    - regression
+  proteingym_q53z42_binding_tapbpr:
+    modality: protein
+    source: proteingym
+    tasks:
+    - regression
+  proteingym_q53z42_expression:
+    modality: protein
+    source: proteingym
+    tasks:
+    - regression
+  proteingym_rask_abundance:
+    modality: protein
+    source: proteingym
+    tasks:
+    - regression
+  proteingym_rask_binding_darpin:
+    modality: protein
+    source: proteingym
+    tasks:
+    - regression
+  proteingym_s22a1_abundance:
+    modality: protein
+    source: proteingym
+    tasks:
+    - regression
+  proteingym_s22a1_activity:
+    modality: protein
+    source: proteingym
+    tasks:
+    - regression
+  proteingym_spike_binding:
+    modality: protein
+    source: proteingym
+    tasks:
+    - regression
+  proteingym_spike_expression:
+    modality: protein
+    source: proteingym
+    tasks:
+    - regression
+  rfam_5_8s_rrna:
+    modality: rna
+    source: rfam
+    tasks:
+    - classification
+    - regression
+  rfam_5s_rrna:
+    modality: rna
+    source: rfam
+    tasks:
+    - classification
+    - regression
+  rfam_trna_easy:
+    modality: rna
+    source: rfam
+    tasks:
+    - classification
+    - regression
+  rfam_u1:
+    modality: rna
+    source: rfam
+    tasks:
+    - classification
+    - regression
+  rfam_u2:
+    modality: rna
+    source: rfam
+    tasks:
+    - classification
+    - regression
+  rna_dst_mean_ribosome_load:
+    modality: rna
+    source: rna_dst
+    tasks:
+    - regression
+  rna_dst_ncrna_family_bnoise0:
+    modality: rna
+    source: rna_dst
+    tasks:
+    - classification
+    - regression
+  rna_dst_ncrna_family_bnoise200:
+    modality: rna
+    source: rna_dst
+    tasks:
+    - classification
+    - regression
+  rna_dst_splice_site_acceptor:
+    modality: rna
+    source: rna_dst
+    tasks:
+    - classification
+    - regression
+  rna_dst_splice_site_donor:
+    modality: rna
+    source: rna_dst
+    tasks:
+    - classification
+    - regression
+  rna_dst_translation_efficiency_hek:
+    modality: rna
+    source: rna_dst
+    tasks:
+    - regression
+  rna_dst_translation_efficiency_muscle:
+    modality: rna
+    source: rna_dst
+    tasks:
+    - regression
+  rna_dst_translation_efficiency_pc3:
+    modality: rna
+    source: rna_dst
+    tasks:
+    - regression
+  sirna:
+    modality: rna
+    source: sirna_efficacy
+    tasks:
+    - regression

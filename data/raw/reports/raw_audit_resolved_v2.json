@@ -1,0 +1,1965 @@
+{
+  "generated_at_utc": "2026-11-17T08:25:48.865583+00:00",
+  "raw_root": "/homes/csiebenschuh/data/bio_sequences/_raw",
+  "offline": false,
+  "sources": {
+    "_nt_tasks": {
+      "repo": "InstaDeepAI/nucleotide_transformer_downstream_tasks_revised",
+      "findings": [
+        {
+          "axis": "coverage",
+          "level": "INFO",
+          "msg": "official train downloaded separately under official_train/ at pinned revision 851f994625 (per-file LFS sha256 verified); original test download and manifest preserved unchanged"
+        },
+        {
+          "axis": "coverage",
+          "level": "PASS",
+          "msg": "official_train total rows (493242, 18 tasks) == upstream default/train"
+        },
+        {
+          "axis": "coverage",
+          "level": "INFO",
+          "msg": "task_split_index.json maps each task to official train file + test.parquet task filter"
+        },
+        {
+          "axis": "coverage",
+          "level": "PASS",
+          "msg": "None/test: 38822 rows == upstream (datasets-server)"
+        },
+        {
+          "axis": "coverage",
+          "level": "INFO",
+          "msg": "test.parquet spans 18 benchmark tasks: H2AFZ=3000, H3K27ac=1616, H3K27me3=3000, H3K36me3=3000, H3K4me1=3000, H3K4me2=2138, H3K4me3=776, H3K9ac=1004, H3K9me3=850, H4K20me1=2270, enhancers=3000, enhancers_types=3000, promoter_all=1584, promoter_no_tata=1372, promoter_tata=212, splice_sites_acceptors=3000, splice_sites_all=3000, splice_sites_donors=3000"
+        }
+      ],
+      "tables": {
+        "_nt_tasks/test.parquet": {
+          "rows": 38822,
+          "seq_null": 0,
+          "seq_empty": 0,
+          "seq_bad_symbol_rows": 0,
+          "target_null": 0,
+          "target_nan": 0,
+          "len_min": 300,
+          "len_max": 1000,
+          "len_mean": 757.4,
+          "charset_sample": "ACGT",
+          "sha256_checked": false
+        },
+        "_nt_tasks/official_train/H2AFZ/train.parquet": {
+          "rows": 30000,
+          "seq_null": 0,
+          "seq_empty": 0,
+          "seq_bad_symbol_rows": 0,
+          "target_null": 0,
+          "target_nan": 0,
+          "len_min": 1000,
+          "len_max": 1000,
+          "len_mean": 1000.0,
+          "charset_sample": "ACGT",
+          "sha256_checked": true
+        },
+        "_nt_tasks/official_train/H3K27ac/train.parquet": {
+          "rows": 30000,
+          "seq_null": 0,
+          "seq_empty": 0,
+          "seq_bad_symbol_rows": 0,
+          "target_null": 0,
+          "target_nan": 0,
+          "len_min": 1000,
+          "len_max": 1000,
+          "len_mean": 1000.0,
+          "charset_sample": "ACGT",
+          "sha256_checked": true
+        },
+        "_nt_tasks/official_train/H3K27me3/train.parquet": {
+          "rows": 30000,
+          "seq_null": 0,
+          "seq_empty": 0,
+          "seq_bad_symbol_rows": 0,
+          "target_null": 0,
+          "target_nan": 0,
+          "len_min": 1000,
+          "len_max": 1000,
+          "len_mean": 1000.0,
+          "charset_sample": "ACGT",
+          "sha256_checked": true
+        },
+        "_nt_tasks/official_train/H3K36me3/train.parquet": {
+          "rows": 30000,
+          "seq_null": 0,
+          "seq_empty": 0,
+          "seq_bad_symbol_rows": 0,
+          "target_null": 0,
+          "target_nan": 0,
+          "len_min": 1000,
+          "len_max": 1000,
+          "len_mean": 1000.0,
+          "charset_sample": "ACGT",
+          "sha256_checked": true
+        },
+        "_nt_tasks/official_train/H3K4me1/train.parquet": {
+          "rows": 30000,
+          "seq_null": 0,
+          "seq_empty": 0,
+          "seq_bad_symbol_rows": 0,
+          "target_null": 0,
+          "target_nan": 0,
+          "len_min": 1000,
+          "len_max": 1000,
+          "len_mean": 1000.0,
+          "charset_sample": "ACGT",
+          "sha256_checked": true
+        },
+        "_nt_tasks/official_train/H3K4me2/train.parquet": {
+          "rows": 30000,
+          "seq_null": 0,
+          "seq_empty": 0,
+          "seq_bad_symbol_rows": 0,
+          "target_null": 0,
+          "target_nan": 0,
+          "len_min": 1000,
+          "len_max": 1000,
+          "len_mean": 1000.0,
+          "charset_sample": "ACGT",
+          "sha256_checked": true
+        },
+        "_nt_tasks/official_train/H3K4me3/train.parquet": {
+          "rows": 17468,
+          "seq_null": 0,
+          "seq_empty": 0,
+          "seq_bad_symbol_rows": 0,
+          "target_null": 0,
+          "target_nan": 0,
+          "len_min": 1000,
+          "len_max": 1000,
+          "len_mean": 1000.0,
+          "charset_sample": "ACGT",
+          "sha256_checked": true
+        },
+        "_nt_tasks/official_train/H3K9ac/train.parquet": {
+          "rows": 23274,
+          "seq_null": 0,
+          "seq_empty": 0,
+          "seq_bad_symbol_rows": 0,
+          "target_null": 0,
+          "target_nan": 0,
+          "len_min": 1000,
+          "len_max": 1000,
+          "len_mean": 1000.0,
+          "charset_sample": "ACGT",
+          "sha256_checked": true
+        },
+        "_nt_tasks/official_train/H3K9me3/train.parquet": {
+          "rows": 27438,
+          "seq_null": 0,
+          "seq_empty": 0,
+          "seq_bad_symbol_rows": 0,
+          "target_null": 0,
+          "target_nan": 0,
+          "len_min": 1000,
+          "len_max": 1000,
+          "len_mean": 1000.0,
+          "charset_sample": "ACGT",
+          "sha256_checked": true
+        },
+        "_nt_tasks/official_train/H4K20me1/train.parquet": {
+          "rows": 30000,
+          "seq_null": 0,
+          "seq_empty": 0,
+          "seq_bad_symbol_rows": 0,
+          "target_null": 0,
+          "target_nan": 0,
+          "len_min": 1000,
+          "len_max": 1000,
+          "len_mean": 1000.0,
+          "charset_sample": "ACGT",
+          "sha256_checked": true
+        },
+        "_nt_tasks/official_train/enhancers/train.parquet": {
+          "rows": 30000,
+          "seq_null": 0,
+          "seq_empty": 0,
+          "seq_bad_symbol_rows": 0,
+          "target_null": 0,
+          "target_nan": 0,
+          "len_min": 400,
+          "len_max": 400,
+          "len_mean": 400.0,
+          "charset_sample": "ACGT",
+          "sha256_checked": true
+        },
+        "_nt_tasks/official_train/enhancers_types/train.parquet": {
+          "rows": 30000,
+          "seq_null": 0,
+          "seq_empty": 0,
+          "seq_bad_symbol_rows": 0,
+          "target_null": 0,
+          "target_nan": 0,
+          "len_min": 400,
+          "len_max": 400,
+          "len_mean": 400.0,
+          "charset_sample": "ACGT",
+          "sha256_checked": true
+        },
+        "_nt_tasks/official_train/promoter_all/train.parquet": {
+          "rows": 30000,
+          "seq_null": 0,
+          "seq_empty": 0,
+          "seq_bad_symbol_rows": 0,
+          "target_null": 0,
+          "target_nan": 0,
+          "len_min": 300,
+          "len_max": 300,
+          "len_mean": 300.0,
+          "charset_sample": "ACGT",
+          "sha256_checked": true
+        },
+        "_nt_tasks/official_train/promoter_no_tata/train.parquet": {
+          "rows": 30000,
+          "seq_null": 0,
+          "seq_empty": 0,
+          "seq_bad_symbol_rows": 0,
+          "target_null": 0,
+          "target_nan": 0,
+          "len_min": 300,
+          "len_max": 300,
+          "len_mean": 300.0,
+          "charset_sample": "ACGT",
+          "sha256_checked": true
+        },
+        "_nt_tasks/official_train/promoter_tata/train.parquet": {
+          "rows": 5062,
+          "seq_null": 0,
+          "seq_empty": 0,
+          "seq_bad_symbol_rows": 0,
+          "target_null": 0,
+          "target_nan": 0,
+          "len_min": 300,
+          "len_max": 300,
+          "len_mean": 300.0,
+          "charset_sample": "ACGT",
+          "sha256_checked": true
+        },
+        "_nt_tasks/official_train/splice_sites_acceptors/train.parquet": {
+          "rows": 30000,
+          "seq_null": 0,
+          "seq_empty": 0,
+          "seq_bad_symbol_rows": 0,
+          "target_null": 0,
+          "target_nan": 0,
+          "len_min": 600,
+          "len_max": 600,
+          "len_mean": 600.0,
+          "charset_sample": "ACGT",
+          "sha256_checked": true
+        },
+        "_nt_tasks/official_train/splice_sites_all/train.parquet": {
+          "rows": 30000,
+          "seq_null": 0,
+          "seq_empty": 0,
+          "seq_bad_symbol_rows": 0,
+          "target_null": 0,
+          "target_nan": 0,
+          "len_min": 600,
+          "len_max": 600,
+          "len_mean": 600.0,
+          "charset_sample": "ACGT",
+          "sha256_checked": true
+        },
+        "_nt_tasks/official_train/splice_sites_donors/train.parquet": {
+          "rows": 30000,
+          "seq_null": 0,
+          "seq_empty": 0,
+          "seq_bad_symbol_rows": 0,
+          "target_null": 0,
+          "target_nan": 0,
+          "len_min": 600,
+          "len_max": 600,
+          "len_mean": 600.0,
+          "charset_sample": "ACGT",
+          "sha256_checked": true
+        }
+      },
+      "manifests": [
+        {
+          "path": "_nt_tasks/download_manifest.json",
+          "downloaded": "2026-05-22T00:22:06.083093+00:00"
+        },
+        {
+          "path": "_nt_tasks/official_train/download_manifest.json",
+          "downloaded": "2026-11-17T08:25:04.239677+00:00"
+        }
+      ],
+      "upstream_sha": "851f9946252e90c665cdb3cc3eedb78f1f26197c",
+      "upstream_modified": "2025-06-30T10:37:24.000Z",
+      "nt_tasks_in_table": {
+        "H2AFZ": 3000,
+        "H3K27ac": 1616,
+        "H3K27me3": 3000,
+        "H3K36me3": 3000,
+        "H3K4me1": 3000,
+        "H3K4me2": 2138,
+        "H3K4me3": 776,
+        "H3K9ac": 1004,
+        "H3K9me3": 850,
+        "H4K20me1": 2270,
+        "enhancers": 3000,
+        "enhancers_types": 3000,
+        "promoter_all": 1584,
+        "promoter_no_tata": 1372,
+        "promoter_tata": 212,
+        "splice_sites_acceptors": 3000,
+        "splice_sites_all": 3000,
+        "splice_sites_donors": 3000
+      },
+      "status": "OK"
+    },
+    "_cds": {
+      "repo": "InstaDeepAI/true-cds-protein-tasks",
+      "findings": [
+        {
+          "axis": "integrity",
+          "level": "INFO",
+          "msg": "_cds/fluorescence/train.parquet: manifest has no row count (skipped_existing rerun); validated against upstream instead"
+        },
+        {
+          "axis": "integrity",
+          "level": "INFO",
+          "msg": "_cds/fluorescence/validation.parquet: manifest has no row count (skipped_existing rerun); validated against upstream instead"
+        },
+        {
+          "axis": "integrity",
+          "level": "INFO",
+          "msg": "_cds/fluorescence/test.parquet: manifest has no row count (skipped_existing rerun); validated against upstream instead"
+        },
+        {
+          "axis": "integrity",
+          "level": "INFO",
+          "msg": "_cds/melting_point/train.parquet: manifest has no row count (skipped_existing rerun); validated against upstream instead"
+        },
+        {
+          "axis": "integrity",
+          "level": "INFO",
+          "msg": "_cds/melting_point/validation.parquet: manifest has no row count (skipped_existing rerun); validated against upstream instead"
+        },
+        {
+          "axis": "integrity",
+          "level": "INFO",
+          "msg": "_cds/melting_point/test.parquet: manifest has no row count (skipped_existing rerun); validated against upstream instead"
+        },
+        {
+          "axis": "integrity",
+          "level": "INFO",
+          "msg": "_cds/stability/train.parquet: manifest has no row count (skipped_existing rerun); validated against upstream instead"
+        },
+        {
+          "axis": "integrity",
+          "level": "INFO",
+          "msg": "_cds/stability/validation.parquet: manifest has no row count (skipped_existing rerun); validated against upstream instead"
+        },
+        {
+          "axis": "integrity",
+          "level": "INFO",
+          "msg": "_cds/stability/test.parquet: manifest has no row count (skipped_existing rerun); validated against upstream instead"
+        },
+        {
+          "axis": "integrity",
+          "level": "INFO",
+          "msg": "_cds/beta_lactamase_complete/train.parquet: manifest has no row count (skipped_existing rerun); validated against upstream instead"
+        },
+        {
+          "axis": "integrity",
+          "level": "INFO",
+          "msg": "_cds/beta_lactamase_complete/validation.parquet: manifest has no row count (skipped_existing rerun); validated against upstream instead"
+        },
+        {
+          "axis": "integrity",
+          "level": "INFO",
+          "msg": "_cds/beta_lactamase_complete/test.parquet: manifest has no row count (skipped_existing rerun); validated against upstream instead"
+        },
+        {
+          "axis": "integrity",
+          "level": "INFO",
+          "msg": "_cds/beta_lactamase_unique/train.parquet: manifest has no row count (skipped_existing rerun); validated against upstream instead"
+        },
+        {
+          "axis": "integrity",
+          "level": "INFO",
+          "msg": "_cds/beta_lactamase_unique/validation.parquet: manifest has no row count (skipped_existing rerun); validated against upstream instead"
+        },
+        {
+          "axis": "integrity",
+          "level": "INFO",
+          "msg": "_cds/beta_lactamase_unique/test.parquet: manifest has no row count (skipped_existing rerun); validated against upstream instead"
+        },
+        {
+          "axis": "coverage",
+          "level": "PASS",
+          "msg": "fluorescence/train: 21464 rows == upstream (datasets-server)"
+        },
+        {
+          "axis": "coverage",
+          "level": "PASS",
+          "msg": "fluorescence/validation: 5366 rows == upstream (datasets-server)"
+        },
+        {
+          "axis": "coverage",
+          "level": "PASS",
+          "msg": "fluorescence/test: 27217 rows == upstream (datasets-server)"
+        },
+        {
+          "axis": "coverage",
+          "level": "PASS",
+          "msg": "melting_point/train: 9432 rows == upstream (datasets-server)"
+        },
+        {
+          "axis": "coverage",
+          "level": "PASS",
+          "msg": "melting_point/validation: 1064 rows == upstream (datasets-server)"
+        },
+        {
+          "axis": "coverage",
+          "level": "PASS",
+          "msg": "melting_point/test: 1648 rows == upstream (datasets-server)"
+        },
+        {
+          "axis": "coverage",
+          "level": "PASS",
+          "msg": "stability/train: 53700 rows == upstream (datasets-server)"
+        },
+        {
+          "axis": "coverage",
+          "level": "PASS",
+          "msg": "stability/validation: 2512 rows == upstream (datasets-server)"
+        },
+        {
+          "axis": "coverage",
+          "level": "PASS",
+          "msg": "stability/test: 12851 rows == upstream (datasets-server)"
+        },
+        {
+          "axis": "coverage",
+          "level": "PASS",
+          "msg": "beta_lactamase_complete/train: 9202 rows == upstream (datasets-server)"
+        },
+        {
+          "axis": "coverage",
+          "level": "PASS",
+          "msg": "beta_lactamase_complete/validation: 2322 rows == upstream (datasets-server)"
+        },
+        {
+          "axis": "coverage",
+          "level": "PASS",
+          "msg": "beta_lactamase_complete/test: 1080 rows == upstream (datasets-server)"
+        },
+        {
+          "axis": "coverage",
+          "level": "PASS",
+          "msg": "beta_lactamase_unique/train: 3457 rows == upstream (datasets-server)"
+        },
+        {
+          "axis": "coverage",
+          "level": "PASS",
+          "msg": "beta_lactamase_unique/validation: 865 rows == upstream (datasets-server)"
+        },
+        {
+          "axis": "coverage",
+          "level": "PASS",
+          "msg": "beta_lactamase_unique/test: 1080 rows == upstream (datasets-server)"
+        },
+        {
+          "axis": "coverage",
+          "level": "PASS",
+          "msg": "all 5 selected configs complete: 15/15 splits match upstream"
+        },
+        {
+          "axis": "coverage",
+          "level": "INFO",
+          "msg": "upstream repo also has config 'ssp' (token-level), deliberately skipped: /home/csiebenschuh/Projects/BinarySignature/dsets/pipelines/cds/downloader.py:20-23"
+        }
+      ],
+      "tables": {
+        "_cds/fluorescence/train.parquet": {
+          "rows": 21464,
+          "seq_null": 0,
+          "seq_empty": 0,
+          "seq_bad_symbol_rows": 0,
+          "target_null": 0,
+          "target_nan": 0,
+          "len_min": 714,
+          "len_max": 714,
+          "len_mean": 714.0,
+          "charset_sample": "ACGT",
+          "sha256_checked": false
+        },
+        "_cds/fluorescence/validation.parquet": {
+          "rows": 5366,
+          "seq_null": 0,
+          "seq_empty": 0,
+          "seq_bad_symbol_rows": 0,
+          "target_null": 0,
+          "target_nan": 0,
+          "len_min": 714,
+          "len_max": 714,
+          "len_mean": 714.0,
+          "charset_sample": "ACGT",
+          "sha256_checked": false
+        },
+        "_cds/fluorescence/test.parquet": {
+          "rows": 27217,
+          "seq_null": 0,
+          "seq_empty": 0,
+          "seq_bad_symbol_rows": 0,
+          "target_null": 0,
+          "target_nan": 0,
+          "len_min": 714,
+          "len_max": 714,
+          "len_mean": 714.0,
+          "charset_sample": "ACGT",
+          "sha256_checked": false
+        },
+        "_cds/melting_point/train.parquet": {
+          "rows": 9432,
+          "seq_null": 0,
+          "seq_empty": 0,
+          "seq_bad_symbol_rows": 0,
+          "target_null": 0,
+          "target_nan": 0,
+          "len_min": 84,
+          "len_max": 3063,
+          "len_mean": 1176.5,
+          "charset_sample": "ACGT",
+          "sha256_checked": false
+        },
+        "_cds/melting_point/validation.parquet": {
+          "rows": 1064,
+          "seq_null": 0,
+          "seq_empty": 0,
+          "seq_bad_symbol_rows": 0,
+          "target_null": 0,
+          "target_nan": 0,
+          "len_min": 135,
+          "len_max": 3066,
+          "len_mean": 1160.7,
+          "charset_sample": "ACGT",
+          "sha256_checked": false
+        },
+        "_cds/melting_point/test.parquet": {
+          "rows": 1648,
+          "seq_null": 0,
+          "seq_empty": 0,
+          "seq_bad_symbol_rows": 0,
+          "target_null": 0,
+          "target_nan": 0,
+          "len_min": 108,
+          "len_max": 3042,
+          "len_mean": 1131.1,
+          "charset_sample": "ACGT",
+          "sha256_checked": false
+        },
+        "_cds/stability/train.parquet": {
+          "rows": 53700,
+          "seq_null": 0,
+          "seq_empty": 0,
+          "seq_bad_symbol_rows": 0,
+          "target_null": 0,
+          "target_nan": 0,
+          "len_min": 129,
+          "len_max": 150,
+          "len_mean": 135.7,
+          "charset_sample": "ACGT",
+          "sha256_checked": false
+        },
+        "_cds/stability/validation.parquet": {
+          "rows": 2512,
+          "seq_null": 0,
+          "seq_empty": 0,
+          "seq_bad_symbol_rows": 0,
+          "target_null": 0,
+          "target_nan": 0,
+          "len_min": 150,
+          "len_max": 150,
+          "len_mean": 150.0,
+          "charset_sample": "ACGT",
+          "sha256_checked": false
+        },
+        "_cds/stability/test.parquet": {
+          "rows": 12851,
+          "seq_null": 0,
+          "seq_empty": 0,
+          "seq_bad_symbol_rows": 0,
+          "target_null": 0,
+          "target_nan": 0,
+          "len_min": 129,
+          "len_max": 138,
+          "len_mean": 129.6,
+          "charset_sample": "ACGT",
+          "sha256_checked": false
+        },
+        "_cds/beta_lactamase_complete/train.parquet": {
+          "rows": 9202,
+          "seq_null": 0,
+          "seq_empty": 0,
+          "seq_bad_symbol_rows": 0,
+          "target_null": 0,
+          "target_nan": 0,
+          "len_min": 858,
+          "len_max": 858,
+          "len_mean": 858.0,
+          "charset_sample": "ACGT",
+          "sha256_checked": false
+        },
+        "_cds/beta_lactamase_complete/validation.parquet": {
+          "rows": 2322,
+          "seq_null": 0,
+          "seq_empty": 0,
+          "seq_bad_symbol_rows": 0,
+          "target_null": 0,
+          "target_nan": 0,
+          "len_min": 858,
+          "len_max": 858,
+          "len_mean": 858.0,
+          "charset_sample": "ACGT",
+          "sha256_checked": false
+        },
+        "_cds/beta_lactamase_complete/test.parquet": {
+          "rows": 1080,
+          "seq_null": 0,
+          "seq_empty": 0,
+          "seq_bad_symbol_rows": 0,
+          "target_null": 0,
+          "target_nan": 0,
+          "len_min": 858,
+          "len_max": 858,
+          "len_mean": 858.0,
+          "charset_sample": "ACGT",
+          "sha256_checked": false
+        },
+        "_cds/beta_lactamase_unique/train.parquet": {
+          "rows": 3457,
+          "seq_null": 0,
+          "seq_empty": 0,
+          "seq_bad_symbol_rows": 0,
+          "target_null": 0,
+          "target_nan": 0,
+          "len_min": 858,
+          "len_max": 858,
+          "len_mean": 858.0,
+          "charset_sample": "ACGT",
+          "sha256_checked": false
+        },
+        "_cds/beta_lactamase_unique/validation.parquet": {
+          "rows": 865,
+          "seq_null": 0,
+          "seq_empty": 0,
+          "seq_bad_symbol_rows": 0,
+          "target_null": 0,
+          "target_nan": 0,
+          "len_min": 858,
+          "len_max": 858,
+          "len_mean": 858.0,
+          "charset_sample": "ACGT",
+          "sha256_checked": false
+        },
+        "_cds/beta_lactamase_unique/test.parquet": {
+          "rows": 1080,
+          "seq_null": 0,
+          "seq_empty": 0,
+          "seq_bad_symbol_rows": 0,
+          "target_null": 0,
+          "target_nan": 0,
+          "len_min": 858,
+          "len_max": 858,
+          "len_mean": 858.0,
+          "charset_sample": "ACGT",
+          "sha256_checked": false
+        }
+      },
+      "manifests": [
+        {
+          "path": "_cds/download_manifest.json",
+          "downloaded": "2026-05-22T00:53:47.911073+00:00"
+        }
+      ],
+      "upstream_sha": "d3d1122ef48edef7e39e324a3619f5b61d579793",
+      "upstream_modified": "2026-01-13T21:52:56.000Z",
+      "status": "OK"
+    },
+    "_rfam": {
+      "repo": "multimolecule/rfam",
+      "findings": [
+        {
+          "axis": "integrity",
+          "level": "DOC",
+          "msg": "_rfam/README.md: size 11643 != manifest 8889 (non-payload file)"
+        },
+        {
+          "axis": "coverage",
+          "level": "PASS",
+          "msg": "data.parquet sha256 equals the upstream LFS sha256 recorded in data.parquet.metadata at snapshot 25e8aa866f -> byte-identical to upstream"
+        },
+        {
+          "axis": "coverage",
+          "level": "INFO",
+          "msg": "upstream split layout differs; row totals recorded in tables"
+        },
+        {
+          "axis": "coverage",
+          "level": "PASS",
+          "msg": "data.parquet rows (20051822) == upstream total"
+        },
+        {
+          "axis": "integrity",
+          "level": "DOC",
+          "msg": "manifest README.md sha256 equals CURRENT upstream README -> local README.md was edited locally after download (notes prepended); sequence payload unaffected"
+        }
+      ],
+      "tables": {
+        "_rfam/data.parquet": {
+          "rows": 20051822,
+          "seq_null": 0,
+          "seq_empty": 0,
+          "seq_bad_symbol_rows": 0,
+          "target_null": 0,
+          "target_nan": 0,
+          "len_min": 19,
+          "len_max": 10799,
+          "len_mean": 121.4,
+          "charset_sample": "ACGKMNRSTUWY",
+          "sha256_checked": true
+        }
+      },
+      "manifests": [
+        {
+          "path": "_rfam/download_manifest.json",
+          "downloaded": "2026-05-21T21:52:43.222373+00:00"
+        }
+      ],
+      "upstream_sha": "25e8aa866f647aefdd0777928ba3de6b98fd1d57",
+      "upstream_modified": "2025-05-20T20:22:25.000Z",
+      "status": "OK"
+    },
+    "_fish_gue": {
+      "repo": "bioinfoihb/Fish_GUE",
+      "findings": [
+        {
+          "axis": "coverage",
+          "level": "INFO",
+          "msg": "HF dataset-viewer exposes a single concatenated 'default' config (371307/46415/46420 rows); it does NOT correspond to task folders - per-task CSVs are the ground truth, mapped in /home/csiebenschuh/Projects/BinarySignature/dsets/pipelines/fish_gue/downloader.py:26-34"
+        },
+        {
+          "axis": "coverage",
+          "level": "PASS",
+          "msg": "all 21 local CSVs are byte-identical to their upstream repo files (git blob sha1 match) -> complete and unmodified for the selected tasks"
+        }
+      ],
+      "tables": {
+        "_fish_gue/CTCF/test.csv": {
+          "rows": 3566,
+          "seq_null": 0,
+          "seq_empty": 0,
+          "seq_bad_symbol_rows": 0,
+          "target_null": 0,
+          "target_nan": 0,
+          "len_min": 800,
+          "len_max": 800,
+          "len_mean": 800.0,
+          "charset_sample": "ACGNT",
+          "sha256_checked": false
+        },
+        "_fish_gue/CTCF/train.csv": {
+          "rows": 28526,
+          "seq_null": 0,
+          "seq_empty": 0,
+          "seq_bad_symbol_rows": 0,
+          "target_null": 0,
+          "target_nan": 0,
+          "len_min": 800,
+          "len_max": 800,
+          "len_mean": 800.0,
+          "charset_sample": "ACGNT",
+          "sha256_checked": false
+        },
+        "_fish_gue/CTCF/val.csv": {
+          "rows": 3566,
+          "seq_null": 0,
+          "seq_empty": 0,
+          "seq_bad_symbol_rows": 0,
+          "target_null": 0,
+          "target_nan": 0,
+          "len_min": 800,
+          "len_max": 800,
+          "len_mean": 800.0,
+          "charset_sample": "ACGT",
+          "sha256_checked": false
+        },
+        "_fish_gue/Pou5f1/test.csv": {
+          "rows": 1391,
+          "seq_null": 0,
+          "seq_empty": 0,
+          "seq_bad_symbol_rows": 0,
+          "target_null": 0,
+          "target_nan": 0,
+          "len_min": 800,
+          "len_max": 800,
+          "len_mean": 800.0,
+          "charset_sample": "ACGNT",
+          "sha256_checked": false
+        },
+        "_fish_gue/Pou5f1/train.csv": {
+          "rows": 11128,
+          "seq_null": 0,
+          "seq_empty": 0,
+          "seq_bad_symbol_rows": 0,
+          "target_null": 0,
+          "target_nan": 0,
+          "len_min": 800,
+          "len_max": 800,
+          "len_mean": 800.0,
+          "charset_sample": "ACGNT",
+          "sha256_checked": false
+        },
+        "_fish_gue/Pou5f1/val.csv": {
+          "rows": 1391,
+          "seq_null": 0,
+          "seq_empty": 0,
+          "seq_bad_symbol_rows": 0,
+          "target_null": 0,
+          "target_nan": 0,
+          "len_min": 800,
+          "len_max": 800,
+          "len_mean": 800.0,
+          "charset_sample": "ACGNT",
+          "sha256_checked": false
+        },
+        "_fish_gue/Sox2/test.csv": {
+          "rows": 1215,
+          "seq_null": 0,
+          "seq_empty": 0,
+          "seq_bad_symbol_rows": 0,
+          "target_null": 0,
+          "target_nan": 0,
+          "len_min": 800,
+          "len_max": 800,
+          "len_mean": 800.0,
+          "charset_sample": "ACGNT",
+          "sha256_checked": false
+        },
+        "_fish_gue/Sox2/train.csv": {
+          "rows": 9717,
+          "seq_null": 0,
+          "seq_empty": 0,
+          "seq_bad_symbol_rows": 0,
+          "target_null": 0,
+          "target_nan": 0,
+          "len_min": 800,
+          "len_max": 800,
+          "len_mean": 800.0,
+          "charset_sample": "ACGNT",
+          "sha256_checked": false
+        },
+        "_fish_gue/Sox2/val.csv": {
+          "rows": 1215,
+          "seq_null": 0,
+          "seq_empty": 0,
+          "seq_bad_symbol_rows": 0,
+          "target_null": 0,
+          "target_nan": 0,
+          "len_min": 800,
+          "len_max": 800,
+          "len_mean": 800.0,
+          "charset_sample": "ACGNT",
+          "sha256_checked": false
+        },
+        "_fish_gue/core_promoter/test.csv": {
+          "rows": 2153,
+          "seq_null": 0,
+          "seq_empty": 0,
+          "seq_bad_symbol_rows": 0,
+          "target_null": 0,
+          "target_nan": 0,
+          "len_min": 300,
+          "len_max": 300,
+          "len_mean": 300.0,
+          "charset_sample": "ACGT",
+          "sha256_checked": false
+        },
+        "_fish_gue/core_promoter/train.csv": {
+          "rows": 17222,
+          "seq_null": 0,
+          "seq_empty": 0,
+          "seq_bad_symbol_rows": 0,
+          "target_null": 0,
+          "target_nan": 0,
+          "len_min": 300,
+          "len_max": 300,
+          "len_mean": 300.0,
+          "charset_sample": "ACGT",
+          "sha256_checked": false
+        },
+        "_fish_gue/core_promoter/val.csv": {
+          "rows": 2153,
+          "seq_null": 0,
+          "seq_empty": 0,
+          "seq_bad_symbol_rows": 0,
+          "target_null": 0,
+          "target_nan": 0,
+          "len_min": 300,
+          "len_max": 300,
+          "len_mean": 300.0,
+          "charset_sample": "ACGT",
+          "sha256_checked": false
+        },
+        "_fish_gue/core_promoter_non_tata/test.csv": {
+          "rows": 1720,
+          "seq_null": 0,
+          "seq_empty": 0,
+          "seq_bad_symbol_rows": 0,
+          "target_null": 0,
+          "target_nan": 0,
+          "len_min": 300,
+          "len_max": 300,
+          "len_mean": 300.0,
+          "charset_sample": "ACGNT",
+          "sha256_checked": false
+        },
+        "_fish_gue/core_promoter_non_tata/train.csv": {
+          "rows": 13757,
+          "seq_null": 0,
+          "seq_empty": 0,
+          "seq_bad_symbol_rows": 0,
+          "target_null": 0,
+          "target_nan": 0,
+          "len_min": 300,
+          "len_max": 300,
+          "len_mean": 300.0,
+          "charset_sample": "ACGT",
+          "sha256_checked": false
+        },
+        "_fish_gue/core_promoter_non_tata/val.csv": {
+          "rows": 1720,
+          "seq_null": 0,
+          "seq_empty": 0,
+          "seq_bad_symbol_rows": 0,
+          "target_null": 0,
+          "target_nan": 0,
+          "len_min": 300,
+          "len_max": 300,
+          "len_mean": 300.0,
+          "charset_sample": "ACGT",
+          "sha256_checked": false
+        },
+        "_fish_gue/core_promoter_tata/test.csv": {
+          "rows": 434,
+          "seq_null": 0,
+          "seq_empty": 0,
+          "seq_bad_symbol_rows": 0,
+          "target_null": 0,
+          "target_nan": 0,
+          "len_min": 300,
+          "len_max": 300,
+          "len_mean": 300.0,
+          "charset_sample": "ACGT",
+          "sha256_checked": false
+        },
+        "_fish_gue/core_promoter_tata/train.csv": {
+          "rows": 3464,
+          "seq_null": 0,
+          "seq_empty": 0,
+          "seq_bad_symbol_rows": 0,
+          "target_null": 0,
+          "target_nan": 0,
+          "len_min": 300,
+          "len_max": 300,
+          "len_mean": 300.0,
+          "charset_sample": "ACGT",
+          "sha256_checked": false
+        },
+        "_fish_gue/core_promoter_tata/val.csv": {
+          "rows": 433,
+          "seq_null": 0,
+          "seq_empty": 0,
+          "seq_bad_symbol_rows": 0,
+          "target_null": 0,
+          "target_nan": 0,
+          "len_min": 300,
+          "len_max": 300,
+          "len_mean": 300.0,
+          "charset_sample": "ACGT",
+          "sha256_checked": false
+        },
+        "_fish_gue/promoter/test.csv": {
+          "rows": 2153,
+          "seq_null": 0,
+          "seq_empty": 0,
+          "seq_bad_symbol_rows": 0,
+          "target_null": 0,
+          "target_nan": 0,
+          "len_min": 1000,
+          "len_max": 1000,
+          "len_mean": 1000.0,
+          "charset_sample": "ACGNT",
+          "sha256_checked": false
+        },
+        "_fish_gue/promoter/train.csv": {
+          "rows": 17222,
+          "seq_null": 0,
+          "seq_empty": 0,
+          "seq_bad_symbol_rows": 0,
+          "target_null": 0,
+          "target_nan": 0,
+          "len_min": 1000,
+          "len_max": 1000,
+          "len_mean": 1000.0,
+          "charset_sample": "ACGNT",
+          "sha256_checked": false
+        },
+        "_fish_gue/promoter/val.csv": {
+          "rows": 2153,
+          "seq_null": 0,
+          "seq_empty": 0,
+          "seq_bad_symbol_rows": 0,
+          "target_null": 0,
+          "target_nan": 0,
+          "len_min": 1000,
+          "len_max": 1000,
+          "len_mean": 1000.0,
+          "charset_sample": "ACGNT",
+          "sha256_checked": false
+        }
+      },
+      "manifests": [
+        {
+          "path": "_fish_gue/CTCF/download_manifest.json",
+          "downloaded": "2026-05-29T17:03:22.937823+00:00"
+        },
+        {
+          "path": "_fish_gue/Pou5f1/download_manifest.json",
+          "downloaded": "2026-05-29T17:03:24.682099+00:00"
+        },
+        {
+          "path": "_fish_gue/Sox2/download_manifest.json",
+          "downloaded": "2026-05-29T17:03:26.289008+00:00"
+        },
+        {
+          "path": "_fish_gue/core_promoter/download_manifest.json",
+          "downloaded": "2026-05-29T17:03:15.471705+00:00"
+        },
+        {
+          "path": "_fish_gue/core_promoter_non_tata/download_manifest.json",
+          "downloaded": "2026-05-29T17:03:17.280156+00:00"
+        },
+        {
+          "path": "_fish_gue/core_promoter_tata/download_manifest.json",
+          "downloaded": "2026-05-29T17:03:16.246554+00:00"
+        },
+        {
+          "path": "_fish_gue/promoter/download_manifest.json",
+          "downloaded": "2026-05-29T17:03:20.133124+00:00"
+        }
+      ],
+      "upstream_sha": "572e84810604b8f9c034c84f8f1052db0c703339",
+      "upstream_modified": "2026-04-15T03:51:42.000Z",
+      "status": "OK"
+    },
+    "_gen_lrb": {
+      "repo": "InstaDeepAI/genomics-long-range-benchmark",
+      "findings": [
+        {
+          "axis": "coverage",
+          "level": "INFO",
+          "msg": "datasets-server row counts unsupported here (HTTP Error 501: Not Implemented); using loader/manifest evidence instead"
+        },
+        {
+          "axis": "coverage",
+          "level": "DESIGN",
+          "msg": "train splits are deliberate subsamples: /home/csiebenschuh/Projects/BinarySignature/dsets/pipelines/gen_lrb/downloader.py:104-114 shuffles each full split with seed=17 and keeps round(limit*w) rows, w=0.7/0.15/0.15; manifest records limit, n_source (full loader split size) and n_rows"
+        },
+        {
+          "axis": "preservation",
+          "level": "DESIGN",
+          "msg": "array-valued labels reduced to scalar nanmean at download: /home/csiebenschuh/Projects/BinarySignature/dsets/pipelines/gen_lrb/downloader.py:120-126; upstream shapes: cage Array2D (seq_len/128, 50), bulk per-tissue vector (genomics-long-range-benchmark.py:174,358); raw labels are therefore NOT the upstream labels for cage/bulk"
+        },
+        {
+          "axis": "coverage",
+          "level": "PASS",
+          "msg": "bulk_rna_expression/train: loader-built full split (22827) == official README count; local keeps 7000/22827"
+        },
+        {
+          "axis": "coverage",
+          "level": "PASS",
+          "msg": "bulk_rna_expression/test: loader-built full split (990) == official README count; local keeps 990/990"
+        },
+        {
+          "axis": "preservation",
+          "level": "PASS",
+          "msg": "bulk_rna_expression/train: all sequences exactly 6144 bp == requested loader window (by construction, not truncation)"
+        },
+        {
+          "axis": "preservation",
+          "level": "PASS",
+          "msg": "bulk_rna_expression/test: all sequences exactly 6144 bp == requested loader window (by construction, not truncation)"
+        },
+        {
+          "axis": "coverage",
+          "level": "PASS",
+          "msg": "cage_prediction/train: loader-built full split (33891) == official README count; local keeps 7000/33891"
+        },
+        {
+          "axis": "coverage",
+          "level": "INFO",
+          "msg": "cage_prediction/validation: no official count published; loader produced 2195, local keeps 1500"
+        },
+        {
+          "axis": "coverage",
+          "level": "PASS",
+          "msg": "cage_prediction/test: loader-built full split (1922) == official README count; local keeps 1500/1922"
+        },
+        {
+          "axis": "preservation",
+          "level": "PASS",
+          "msg": "cage_prediction/train: all sequences exactly 16384 bp == requested loader window (by construction, not truncation)"
+        },
+        {
+          "axis": "preservation",
+          "level": "PASS",
+          "msg": "cage_prediction/validation: all sequences exactly 16384 bp == requested loader window (by construction, not truncation)"
+        },
+        {
+          "axis": "preservation",
+          "level": "PASS",
+          "msg": "cage_prediction/test: all sequences exactly 16384 bp == requested loader window (by construction, not truncation)"
+        },
+        {
+          "axis": "coverage",
+          "level": "UNRESOLVED",
+          "msg": "regulatory_element_enhancer/train: loader n_source 1914565 vs README count 1914575 (diff 10); cannot arbitrate without rebuilding the split"
+        },
+        {
+          "axis": "coverage",
+          "level": "PASS",
+          "msg": "regulatory_element_enhancer/test: loader-built full split (192201) == official README count; local keeps 1500/192201"
+        },
+        {
+          "axis": "preservation",
+          "level": "PASS",
+          "msg": "regulatory_element_enhancer/train: all sequences exactly 2048 bp == requested loader window (by construction, not truncation)"
+        },
+        {
+          "axis": "preservation",
+          "level": "PASS",
+          "msg": "regulatory_element_enhancer/test: all sequences exactly 2048 bp == requested loader window (by construction, not truncation)"
+        }
+      ],
+      "tables": {
+        "_gen_lrb/bulk_rna_expression/train.parquet": {
+          "rows": 7000,
+          "seq_null": 0,
+          "seq_empty": 0,
+          "seq_bad_symbol_rows": 0,
+          "target_null": 0,
+          "target_nan": 0,
+          "len_min": 6144,
+          "len_max": 6144,
+          "len_mean": 6144.0,
+          "charset_sample": "ACGNT",
+          "sha256_checked": false
+        },
+        "_gen_lrb/bulk_rna_expression/test.parquet": {
+          "rows": 990,
+          "seq_null": 0,
+          "seq_empty": 0,
+          "seq_bad_symbol_rows": 0,
+          "target_null": 0,
+          "target_nan": 0,
+          "len_min": 6144,
+          "len_max": 6144,
+          "len_mean": 6144.0,
+          "charset_sample": "ACGT",
+          "sha256_checked": false
+        },
+        "_gen_lrb/cage_prediction/train.parquet": {
+          "rows": 7000,
+          "seq_null": 0,
+          "seq_empty": 0,
+          "seq_bad_symbol_rows": 0,
+          "target_null": 0,
+          "target_nan": 0,
+          "len_min": 16384,
+          "len_max": 16384,
+          "len_mean": 16384.0,
+          "charset_sample": "ACGT",
+          "sha256_checked": false
+        },
+        "_gen_lrb/cage_prediction/validation.parquet": {
+          "rows": 1500,
+          "seq_null": 0,
+          "seq_empty": 0,
+          "seq_bad_symbol_rows": 0,
+          "target_null": 0,
+          "target_nan": 0,
+          "len_min": 16384,
+          "len_max": 16384,
+          "len_mean": 16384.0,
+          "charset_sample": "ACGT",
+          "sha256_checked": false
+        },
+        "_gen_lrb/cage_prediction/test.parquet": {
+          "rows": 1500,
+          "seq_null": 0,
+          "seq_empty": 0,
+          "seq_bad_symbol_rows": 0,
+          "target_null": 0,
+          "target_nan": 0,
+          "len_min": 16384,
+          "len_max": 16384,
+          "len_mean": 16384.0,
+          "charset_sample": "ACGT",
+          "sha256_checked": false
+        },
+        "_gen_lrb/regulatory_element_enhancer/train.parquet": {
+          "rows": 7000,
+          "seq_null": 0,
+          "seq_empty": 0,
+          "seq_bad_symbol_rows": 0,
+          "target_null": 0,
+          "target_nan": 0,
+          "len_min": 2048,
+          "len_max": 2048,
+          "len_mean": 2048.0,
+          "charset_sample": "ACGNT",
+          "sha256_checked": false
+        },
+        "_gen_lrb/regulatory_element_enhancer/test.parquet": {
+          "rows": 1500,
+          "seq_null": 0,
+          "seq_empty": 0,
+          "seq_bad_symbol_rows": 0,
+          "target_null": 0,
+          "target_nan": 0,
+          "len_min": 2048,
+          "len_max": 2048,
+          "len_mean": 2048.0,
+          "charset_sample": "ACGNT",
+          "sha256_checked": false
+        }
+      },
+      "manifests": [
+        {
+          "path": "_gen_lrb/bulk_rna_expression/download_manifest.json",
+          "downloaded": "2026-05-29T17:34:38.283915+00:00"
+        },
+        {
+          "path": "_gen_lrb/cage_prediction/download_manifest.json",
+          "downloaded": "2026-05-29T17:34:39.567439+00:00"
+        },
+        {
+          "path": "_gen_lrb/regulatory_element_enhancer/download_manifest.json",
+          "downloaded": "2026-05-29T17:28:28.173190+00:00"
+        }
+      ],
+      "upstream_sha": "b56f68ee30c01daf8f80a8d0b8a47f84199de08e",
+      "upstream_modified": "2024-06-21T18:16:51.000Z",
+      "status": "UNRESOLVED"
+    },
+    "_plant_gen": {
+      "repo": "InstaDeepAI/plant-genomic-benchmark",
+      "findings": [
+        {
+          "axis": "coverage",
+          "level": "INFO",
+          "msg": "datasets-server row counts unsupported here (HTTP Error 501: Not Implemented); using loader/manifest evidence instead"
+        },
+        {
+          "axis": "coverage",
+          "level": "PASS",
+          "msg": "poly_a.arabidopsis_thaliana: upstream provides only train+test FASTAs (no *_validation.fa in repo; loader plant-genomic-benchmark.py:151-186 adds validation only when one exists) and both are downloaded in full ({'train': 170835, 'test': 30384})"
+        },
+        {
+          "axis": "coverage",
+          "level": "PASS",
+          "msg": "poly_a.arabidopsis_thaliana: upstream FASTA bytes/record agree across splits (419.9 vs 420.0) -> local row counts consistent with full upstream files"
+        },
+        {
+          "axis": "coverage",
+          "level": "PASS",
+          "msg": "splicing.arabidopsis_thaliana_acceptor: upstream provides only train+test FASTAs (no *_validation.fa in repo; loader plant-genomic-benchmark.py:151-186 adds validation only when one exists) and both are downloaded in full ({'train': 1704844, 'test': 250084})"
+        },
+        {
+          "axis": "coverage",
+          "level": "PASS",
+          "msg": "splicing.arabidopsis_thaliana_acceptor: upstream FASTA bytes/record agree across splits (423.5 vs 423.6) -> local row counts consistent with full upstream files"
+        },
+        {
+          "axis": "coverage",
+          "level": "PASS",
+          "msg": "splicing.arabidopsis_thaliana_donor: upstream provides only train+test FASTAs (no *_validation.fa in repo; loader plant-genomic-benchmark.py:151-186 adds validation only when one exists) and both are downloaded in full ({'train': 2588034, 'test': 377873})"
+        },
+        {
+          "axis": "coverage",
+          "level": "PASS",
+          "msg": "splicing.arabidopsis_thaliana_donor: upstream FASTA bytes/record agree across splits (423.5 vs 423.6) -> local row counts consistent with full upstream files"
+        }
+      ],
+      "tables": {
+        "_plant_gen/poly_a__arabidopsis_thaliana/train.parquet": {
+          "rows": 170835,
+          "seq_null": 0,
+          "seq_empty": 0,
+          "seq_bad_symbol_rows": 0,
+          "target_null": 0,
+          "target_nan": 0,
+          "len_min": 400,
+          "len_max": 400,
+          "len_mean": 400.0,
+          "charset_sample": "ACGT",
+          "sha256_checked": false
+        },
+        "_plant_gen/poly_a__arabidopsis_thaliana/test.parquet": {
+          "rows": 30384,
+          "seq_null": 0,
+          "seq_empty": 0,
+          "seq_bad_symbol_rows": 0,
+          "target_null": 0,
+          "target_nan": 0,
+          "len_min": 400,
+          "len_max": 400,
+          "len_mean": 400.0,
+          "charset_sample": "ACGT",
+          "sha256_checked": false
+        },
+        "_plant_gen/splicing__arabidopsis_thaliana_acceptor/train.parquet": {
+          "rows": 1704844,
+          "seq_null": 0,
+          "seq_empty": 0,
+          "seq_bad_symbol_rows": 0,
+          "target_null": 0,
+          "target_nan": 0,
+          "len_min": 398,
+          "len_max": 398,
+          "len_mean": 398.0,
+          "charset_sample": "ACGT",
+          "sha256_checked": false
+        },
+        "_plant_gen/splicing__arabidopsis_thaliana_acceptor/test.parquet": {
+          "rows": 250084,
+          "seq_null": 0,
+          "seq_empty": 0,
+          "seq_bad_symbol_rows": 0,
+          "target_null": 0,
+          "target_nan": 0,
+          "len_min": 398,
+          "len_max": 398,
+          "len_mean": 398.0,
+          "charset_sample": "ACGT",
+          "sha256_checked": false
+        },
+        "_plant_gen/splicing__arabidopsis_thaliana_donor/train.parquet": {
+          "rows": 2588034,
+          "seq_null": 0,
+          "seq_empty": 0,
+          "seq_bad_symbol_rows": 0,
+          "target_null": 0,
+          "target_nan": 0,
+          "len_min": 398,
+          "len_max": 398,
+          "len_mean": 398.0,
+          "charset_sample": "ACGT",
+          "sha256_checked": false
+        },
+        "_plant_gen/splicing__arabidopsis_thaliana_donor/test.parquet": {
+          "rows": 377873,
+          "seq_null": 0,
+          "seq_empty": 0,
+          "seq_bad_symbol_rows": 0,
+          "target_null": 0,
+          "target_nan": 0,
+          "len_min": 398,
+          "len_max": 398,
+          "len_mean": 398.0,
+          "charset_sample": "ACGT",
+          "sha256_checked": false
+        }
+      },
+      "manifests": [
+        {
+          "path": "_plant_gen/poly_a__arabidopsis_thaliana/download_manifest.json",
+          "downloaded": "2026-05-29T17:01:52.347100+00:00"
+        },
+        {
+          "path": "_plant_gen/splicing__arabidopsis_thaliana_acceptor/download_manifest.json",
+          "downloaded": "2026-05-29T17:02:52.929525+00:00"
+        },
+        {
+          "path": "_plant_gen/splicing__arabidopsis_thaliana_donor/download_manifest.json",
+          "downloaded": "2026-05-29T17:02:28.282592+00:00"
+        }
+      ],
+      "upstream_sha": "78ec8156c2ffb3e5475277fdb7eb603294224e53",
+      "upstream_modified": "2024-06-02T13:16:35.000Z",
+      "status": "OK"
+    },
+    "_rna_dst": {
+      "repo": "genbio-ai/rna-downstream-tasks",
+      "findings": [
+        {
+          "axis": "freshness",
+          "level": "INFO",
+          "msg": "_rna_dst/mean_ribosome_load/download_manifest.json: repo modified after download (2026-09-09T20:27:47.000Z > 2026-05-29T16:59:25.149452+00:00); resolving per selected file"
+        },
+        {
+          "axis": "freshness",
+          "level": "INFO",
+          "msg": "_rna_dst/ncrna_family_bnoise0/download_manifest.json: repo modified after download (2026-09-09T20:27:47.000Z > 2026-05-29T16:59:40.404785+00:00); resolving per selected file"
+        },
+        {
+          "axis": "freshness",
+          "level": "INFO",
+          "msg": "_rna_dst/ncrna_family_bnoise200/download_manifest.json: repo modified after download (2026-09-09T20:27:47.000Z > 2026-05-29T16:59:43.330704+00:00); resolving per selected file"
+        },
+        {
+          "axis": "freshness",
+          "level": "INFO",
+          "msg": "_rna_dst/splice_site_acceptor/download_manifest.json: repo modified after download (2026-09-09T20:27:47.000Z > 2026-05-29T16:59:38.027702+00:00); resolving per selected file"
+        },
+        {
+          "axis": "freshness",
+          "level": "INFO",
+          "msg": "_rna_dst/splice_site_donor/download_manifest.json: repo modified after download (2026-09-09T20:27:47.000Z > 2026-05-29T16:59:32.767020+00:00); resolving per selected file"
+        },
+        {
+          "axis": "freshness",
+          "level": "INFO",
+          "msg": "_rna_dst/translation_efficiency_HEK/download_manifest.json: repo modified after download (2026-09-09T20:27:47.000Z > 2026-05-29T16:59:26.317856+00:00); resolving per selected file"
+        },
+        {
+          "axis": "freshness",
+          "level": "INFO",
+          "msg": "_rna_dst/translation_efficiency_Muscle/download_manifest.json: repo modified after download (2026-09-09T20:27:47.000Z > 2026-05-29T16:59:27.959227+00:00); resolving per selected file"
+        },
+        {
+          "axis": "freshness",
+          "level": "INFO",
+          "msg": "_rna_dst/translation_efficiency_pc3/download_manifest.json: repo modified after download (2026-09-09T20:27:47.000Z > 2026-05-29T16:59:27.344055+00:00); resolving per selected file"
+        },
+        {
+          "axis": "coverage",
+          "level": "PASS",
+          "msg": "mean_ribosome_load/train: 76319 rows == upstream (datasets-server)"
+        },
+        {
+          "axis": "coverage",
+          "level": "PASS",
+          "msg": "mean_ribosome_load/validation: 7600 rows == upstream (datasets-server)"
+        },
+        {
+          "axis": "coverage",
+          "level": "PASS",
+          "msg": "mean_ribosome_load/test: 7600 rows == upstream (datasets-server)"
+        },
+        {
+          "axis": "coverage",
+          "level": "PASS",
+          "msg": "ncrna_family_bnoise0/train: 105864 rows == upstream (datasets-server)"
+        },
+        {
+          "axis": "coverage",
+          "level": "PASS",
+          "msg": "ncrna_family_bnoise0/validation: 17324 rows == upstream (datasets-server)"
+        },
+        {
+          "axis": "coverage",
+          "level": "PASS",
+          "msg": "ncrna_family_bnoise0/test: 25342 rows == upstream (datasets-server)"
+        },
+        {
+          "axis": "coverage",
+          "level": "PASS",
+          "msg": "ncrna_family_bnoise200/train: 105864 rows == upstream (datasets-server)"
+        },
+        {
+          "axis": "coverage",
+          "level": "PASS",
+          "msg": "ncrna_family_bnoise200/validation: 17324 rows == upstream (datasets-server)"
+        },
+        {
+          "axis": "coverage",
+          "level": "PASS",
+          "msg": "ncrna_family_bnoise200/test: 25342 rows == upstream (datasets-server)"
+        },
+        {
+          "axis": "coverage",
+          "level": "PASS",
+          "msg": "splice_site_acceptor/train: 17723 rows == upstream (datasets-server)"
+        },
+        {
+          "axis": "coverage",
+          "level": "PASS",
+          "msg": "splice_site_acceptor/validation: 4431 rows == upstream (datasets-server)"
+        },
+        {
+          "axis": "coverage",
+          "level": "PASS",
+          "msg": "splice_site_acceptor/test_danio: 20000 rows == upstream (datasets-server)"
+        },
+        {
+          "axis": "coverage",
+          "level": "PASS",
+          "msg": "splice_site_acceptor/test_fly: 20000 rows == upstream (datasets-server)"
+        },
+        {
+          "axis": "coverage",
+          "level": "PASS",
+          "msg": "splice_site_acceptor/test_thaliana: 20000 rows == upstream (datasets-server)"
+        },
+        {
+          "axis": "coverage",
+          "level": "PASS",
+          "msg": "splice_site_acceptor/test_worm: 20000 rows == upstream (datasets-server)"
+        },
+        {
+          "axis": "coverage",
+          "level": "PASS",
+          "msg": "splice_site_donor/train: 17556 rows == upstream (datasets-server)"
+        },
+        {
+          "axis": "coverage",
+          "level": "PASS",
+          "msg": "splice_site_donor/validation: 4389 rows == upstream (datasets-server)"
+        },
+        {
+          "axis": "coverage",
+          "level": "PASS",
+          "msg": "splice_site_donor/test_danio: 20000 rows == upstream (datasets-server)"
+        },
+        {
+          "axis": "coverage",
+          "level": "PASS",
+          "msg": "splice_site_donor/test_fly: 20000 rows == upstream (datasets-server)"
+        },
+        {
+          "axis": "coverage",
+          "level": "PASS",
+          "msg": "splice_site_donor/test_thaliana: 20000 rows == upstream (datasets-server)"
+        },
+        {
+          "axis": "coverage",
+          "level": "PASS",
+          "msg": "splice_site_donor/test_worm: 20000 rows == upstream (datasets-server)"
+        },
+        {
+          "axis": "coverage",
+          "level": "PASS",
+          "msg": "translation_efficiency_HEK/train: 14410 rows == upstream (datasets-server)"
+        },
+        {
+          "axis": "coverage",
+          "level": "PASS",
+          "msg": "translation_efficiency_Muscle/train: 1257 rows == upstream (datasets-server)"
+        },
+        {
+          "axis": "coverage",
+          "level": "PASS",
+          "msg": "translation_efficiency_pc3/train: 12579 rows == upstream (datasets-server)"
+        },
+        {
+          "axis": "coverage",
+          "level": "PASS",
+          "msg": "all 24 splits of the 8 selected configs match current upstream row counts (incl. species test splits test_danio/fly/thaliana/worm; count agreement, not content identity)"
+        },
+        {
+          "axis": "freshness",
+          "level": "PASS",
+          "msg": "mean_ribosome_load: all source files under ['mean_ribosome_load'] last committed 2024-11-22, before download 2026-05-29 -> post-download repo changes (mrna_half_life, rna_protein_interaction, README rebrand) do not affect this config"
+        },
+        {
+          "axis": "freshness",
+          "level": "PASS",
+          "msg": "ncrna_family_bnoise0: all source files under ['ncrna_family_classification/bnoise0'] last committed 2024-11-14, before download 2026-05-29 -> post-download repo changes (mrna_half_life, rna_protein_interaction, README rebrand) do not affect this config"
+        },
+        {
+          "axis": "freshness",
+          "level": "PASS",
+          "msg": "ncrna_family_bnoise200: all source files under ['ncrna_family_classification/bnoise200'] last committed 2024-11-14, before download 2026-05-29 -> post-download repo changes (mrna_half_life, rna_protein_interaction, README rebrand) do not affect this config"
+        },
+        {
+          "axis": "freshness",
+          "level": "PASS",
+          "msg": "splice_site_acceptor: all source files under ['splice_site_prediction/acceptor'] last committed 2024-11-14, before download 2026-05-29 -> post-download repo changes (mrna_half_life, rna_protein_interaction, README rebrand) do not affect this config"
+        },
+        {
+          "axis": "freshness",
+          "level": "PASS",
+          "msg": "splice_site_donor: all source files under ['splice_site_prediction/donor'] last committed 2024-11-14, before download 2026-05-29 -> post-download repo changes (mrna_half_life, rna_protein_interaction, README rebrand) do not affect this config"
+        },
+        {
+          "axis": "freshness",
+          "level": "PASS",
+          "msg": "translation_efficiency_HEK: all source files under ['translation_efficiency', 'expression_level'] last committed 2024-11-14, before download 2026-05-29 -> post-download repo changes (mrna_half_life, rna_protein_interaction, README rebrand) do not affect this config"
+        },
+        {
+          "axis": "freshness",
+          "level": "PASS",
+          "msg": "translation_efficiency_Muscle: all source files under ['translation_efficiency', 'expression_level'] last committed 2024-11-14, before download 2026-05-29 -> post-download repo changes (mrna_half_life, rna_protein_interaction, README rebrand) do not affect this config"
+        },
+        {
+          "axis": "freshness",
+          "level": "PASS",
+          "msg": "translation_efficiency_pc3: all source files under ['translation_efficiency', 'expression_level'] last committed 2024-11-14, before download 2026-05-29 -> post-download repo changes (mrna_half_life, rna_protein_interaction, README rebrand) do not affect this config"
+        }
+      ],
+      "tables": {
+        "_rna_dst/mean_ribosome_load/train.parquet": {
+          "rows": 76319,
+          "seq_null": 0,
+          "seq_empty": 0,
+          "seq_bad_symbol_rows": 0,
+          "target_null": 0,
+          "target_nan": 0,
+          "len_min": 25,
+          "len_max": 100,
+          "len_mean": 61.3,
+          "charset_sample": "ACGT",
+          "sha256_checked": false
+        },
+        "_rna_dst/mean_ribosome_load/validation.parquet": {
+          "rows": 7600,
+          "seq_null": 0,
+          "seq_empty": 0,
+          "seq_bad_symbol_rows": 0,
+          "target_null": 0,
+          "target_nan": 0,
+          "len_min": 25,
+          "len_max": 100,
+          "len_mean": 62.5,
+          "charset_sample": "ACGT",
+          "sha256_checked": false
+        },
+        "_rna_dst/mean_ribosome_load/test.parquet": {
+          "rows": 7600,
+          "seq_null": 0,
+          "seq_empty": 0,
+          "seq_bad_symbol_rows": 0,
+          "target_null": 0,
+          "target_nan": 0,
+          "len_min": 25,
+          "len_max": 100,
+          "len_mean": 62.5,
+          "charset_sample": "ACGT",
+          "sha256_checked": false
+        },
+        "_rna_dst/ncrna_family_bnoise0/train.parquet": {
+          "rows": 105864,
+          "seq_null": 0,
+          "seq_empty": 0,
+          "seq_bad_symbol_rows": 0,
+          "target_null": 0,
+          "target_nan": 0,
+          "len_min": 24,
+          "len_max": 200,
+          "len_mean": 113.9,
+          "charset_sample": "ACGT",
+          "sha256_checked": false
+        },
+        "_rna_dst/ncrna_family_bnoise0/validation.parquet": {
+          "rows": 17324,
+          "seq_null": 0,
+          "seq_empty": 0,
+          "seq_bad_symbol_rows": 0,
+          "target_null": 0,
+          "target_nan": 0,
+          "len_min": 26,
+          "len_max": 200,
+          "len_mean": 120.1,
+          "charset_sample": "ACGT",
+          "sha256_checked": false
+        },
+        "_rna_dst/ncrna_family_bnoise0/test.parquet": {
+          "rows": 25342,
+          "seq_null": 0,
+          "seq_empty": 0,
+          "seq_bad_symbol_rows": 0,
+          "target_null": 0,
+          "target_nan": 0,
+          "len_min": 30,
+          "len_max": 200,
+          "len_mean": 123.0,
+          "charset_sample": "ACGT",
+          "sha256_checked": false
+        },
+        "_rna_dst/ncrna_family_bnoise200/train.parquet": {
+          "rows": 105864,
+          "seq_null": 0,
+          "seq_empty": 0,
+          "seq_bad_symbol_rows": 0,
+          "target_null": 0,
+          "target_nan": 0,
+          "len_min": 72,
+          "len_max": 600,
+          "len_mean": 339.7,
+          "charset_sample": "ACGT",
+          "sha256_checked": false
+        },
+        "_rna_dst/ncrna_family_bnoise200/validation.parquet": {
+          "rows": 17324,
+          "seq_null": 0,
+          "seq_empty": 0,
+          "seq_bad_symbol_rows": 0,
+          "target_null": 0,
+          "target_nan": 0,
+          "len_min": 78,
+          "len_max": 600,
+          "len_mean": 358.3,
+          "charset_sample": "ACGT",
+          "sha256_checked": false
+        },
+        "_rna_dst/ncrna_family_bnoise200/test.parquet": {
+          "rows": 25342,
+          "seq_null": 0,
+          "seq_empty": 0,
+          "seq_bad_symbol_rows": 0,
+          "target_null": 0,
+          "target_nan": 0,
+          "len_min": 90,
+          "len_max": 600,
+          "len_mean": 367.0,
+          "charset_sample": "ACGT",
+          "sha256_checked": false
+        },
+        "_rna_dst/splice_site_acceptor/train.parquet": {
+          "rows": 17723,
+          "seq_null": 0,
+          "seq_empty": 0,
+          "seq_bad_symbol_rows": 0,
+          "target_null": 0,
+          "target_nan": 0,
+          "len_min": 400,
+          "len_max": 400,
+          "len_mean": 400.0,
+          "charset_sample": "ACGT",
+          "sha256_checked": false
+        },
+        "_rna_dst/splice_site_acceptor/validation.parquet": {
+          "rows": 4431,
+          "seq_null": 0,
+          "seq_empty": 0,
+          "seq_bad_symbol_rows": 0,
+          "target_null": 0,
+          "target_nan": 0,
+          "len_min": 400,
+          "len_max": 400,
+          "len_mean": 400.0,
+          "charset_sample": "ACGT",
+          "sha256_checked": false
+        },
+        "_rna_dst/splice_site_acceptor/test_danio.parquet": {
+          "rows": 20000,
+          "seq_null": 0,
+          "seq_empty": 0,
+          "seq_bad_symbol_rows": 0,
+          "target_null": 0,
+          "target_nan": 0,
+          "len_min": 400,
+          "len_max": 400,
+          "len_mean": 400.0,
+          "charset_sample": "ACGNT",
+          "sha256_checked": false
+        },
+        "_rna_dst/splice_site_acceptor/test_fly.parquet": {
+          "rows": 20000,
+          "seq_null": 0,
+          "seq_empty": 0,
+          "seq_bad_symbol_rows": 0,
+          "target_null": 0,
+          "target_nan": 0,
+          "len_min": 400,
+          "len_max": 400,
+          "len_mean": 400.0,
+          "charset_sample": "ACGNT",
+          "sha256_checked": false
+        },
+        "_rna_dst/splice_site_acceptor/test_thaliana.parquet": {
+          "rows": 20000,
+          "seq_null": 0,
+          "seq_empty": 0,
+          "seq_bad_symbol_rows": 0,
+          "target_null": 0,
+          "target_nan": 0,
+          "len_min": 400,
+          "len_max": 400,
+          "len_mean": 400.0,
+          "charset_sample": "ACGNT",
+          "sha256_checked": false
+        },
+        "_rna_dst/splice_site_acceptor/test_worm.parquet": {
+          "rows": 20000,
+          "seq_null": 0,
+          "seq_empty": 0,
+          "seq_bad_symbol_rows": 0,
+          "target_null": 0,
+          "target_nan": 0,
+          "len_min": 400,
+          "len_max": 400,
+          "len_mean": 400.0,
+          "charset_sample": "ACGNT",
+          "sha256_checked": false
+        },
+        "_rna_dst/splice_site_donor/train.parquet": {
+          "rows": 17556,
+          "seq_null": 0,
+          "seq_empty": 0,
+          "seq_bad_symbol_rows": 0,
+          "target_null": 0,
+          "target_nan": 0,
+          "len_min": 400,
+          "len_max": 400,
+          "len_mean": 400.0,
+          "charset_sample": "ACGT",
+          "sha256_checked": false
+        },
+        "_rna_dst/splice_site_donor/validation.parquet": {
+          "rows": 4389,
+          "seq_null": 0,
+          "seq_empty": 0,
+          "seq_bad_symbol_rows": 0,
+          "target_null": 0,
+          "target_nan": 0,
+          "len_min": 400,
+          "len_max": 400,
+          "len_mean": 400.0,
+          "charset_sample": "ACGT",
+          "sha256_checked": false
+        },
+        "_rna_dst/splice_site_donor/test_danio.parquet": {
+          "rows": 20000,
+          "seq_null": 0,
+          "seq_empty": 0,
+          "seq_bad_symbol_rows": 0,
+          "target_null": 0,
+          "target_nan": 0,
+          "len_min": 400,
+          "len_max": 400,
+          "len_mean": 400.0,
+          "charset_sample": "ACGNT",
+          "sha256_checked": false
+        },
+        "_rna_dst/splice_site_donor/test_fly.parquet": {
+          "rows": 20000,
+          "seq_null": 0,
+          "seq_empty": 0,
+          "seq_bad_symbol_rows": 0,
+          "target_null": 0,
+          "target_nan": 0,
+          "len_min": 400,
+          "len_max": 400,
+          "len_mean": 400.0,
+          "charset_sample": "ACGNT",
+          "sha256_checked": false
+        },
+        "_rna_dst/splice_site_donor/test_thaliana.parquet": {
+          "rows": 20000,
+          "seq_null": 0,
+          "seq_empty": 0,
+          "seq_bad_symbol_rows": 0,
+          "target_null": 0,
+          "target_nan": 0,
+          "len_min": 400,
+          "len_max": 400,
+          "len_mean": 400.0,
+          "charset_sample": "ACGNT",
+          "sha256_checked": false
+        },
+        "_rna_dst/splice_site_donor/test_worm.parquet": {
+          "rows": 20000,
+          "seq_null": 0,
+          "seq_empty": 0,
+          "seq_bad_symbol_rows": 0,
+          "target_null": 0,
+          "target_nan": 0,
+          "len_min": 400,
+          "len_max": 400,
+          "len_mean": 400.0,
+          "charset_sample": "ACGNT",
+          "sha256_checked": false
+        },
+        "_rna_dst/translation_efficiency_HEK/train.parquet": {
+          "rows": 14410,
+          "seq_null": 0,
+          "seq_empty": 0,
+          "seq_bad_symbol_rows": 0,
+          "target_null": 0,
+          "target_nan": 0,
+          "len_min": 45,
+          "len_max": 100,
+          "len_mean": 91.1,
+          "charset_sample": "ACGT",
+          "sha256_checked": false
+        },
+        "_rna_dst/translation_efficiency_Muscle/train.parquet": {
+          "rows": 1257,
+          "seq_null": 0,
+          "seq_empty": 0,
+          "seq_bad_symbol_rows": 0,
+          "target_null": 0,
+          "target_nan": 0,
+          "len_min": 45,
+          "len_max": 100,
+          "len_mean": 91.1,
+          "charset_sample": "ACGT",
+          "sha256_checked": false
+        },
+        "_rna_dst/translation_efficiency_pc3/train.parquet": {
+          "rows": 12579,
+          "seq_null": 0,
+          "seq_empty": 0,
+          "seq_bad_symbol_rows": 0,
+          "target_null": 0,
+          "target_nan": 0,
+          "len_min": 45,
+          "len_max": 100,
+          "len_mean": 91.4,
+          "charset_sample": "ACGT",
+          "sha256_checked": false
+        }
+      },
+      "manifests": [
+        {
+          "path": "_rna_dst/mean_ribosome_load/download_manifest.json",
+          "downloaded": "2026-05-29T16:59:25.149452+00:00"
+        },
+        {
+          "path": "_rna_dst/ncrna_family_bnoise0/download_manifest.json",
+          "downloaded": "2026-05-29T16:59:40.404785+00:00"
+        },
+        {
+          "path": "_rna_dst/ncrna_family_bnoise200/download_manifest.json",
+          "downloaded": "2026-05-29T16:59:43.330704+00:00"
+        },
+        {
+          "path": "_rna_dst/splice_site_acceptor/download_manifest.json",
+          "downloaded": "2026-05-29T16:59:38.027702+00:00"
+        },
+        {
+          "path": "_rna_dst/splice_site_donor/download_manifest.json",
+          "downloaded": "2026-05-29T16:59:32.767020+00:00"
+        },
+        {
+          "path": "_rna_dst/translation_efficiency_HEK/download_manifest.json",
+          "downloaded": "2026-05-29T16:59:26.317856+00:00"
+        },
+        {
+          "path": "_rna_dst/translation_efficiency_Muscle/download_manifest.json",
+          "downloaded": "2026-05-29T16:59:27.959227+00:00"
+        },
+        {
+          "path": "_rna_dst/translation_efficiency_pc3/download_manifest.json",
+          "downloaded": "2026-05-29T16:59:27.344055+00:00"
+        }
+      ],
+      "upstream_sha": "05578f93fd2380b46820a00d197c9b7fd3125bb6",
+      "upstream_modified": "2026-09-09T20:27:47.000Z",
+      "status": "OK"
+    }
+  }
+}
