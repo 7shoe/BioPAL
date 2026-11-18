@@ -1,0 +1,228 @@
+# Shared path configuration: raw datasets, curated tasks, and foundation models
+# - compatible with ALCF's Aurora HPC and Cell's lambda13 (machine picked by hostname)
+# - consumed by data/raw/audit_raw.py, audit_raw_deep.py & overview.py (raw_base, datasets),
+#   data/processed/audit_tasks.py (curated_base), and
+#   models/backbones/audit_models.py (models_base, caches, models)
+# - dataset `path` entries are relative to the machine's `raw_base`;
+#   cache entries are relative to `models_base`
+
+machines:
+  lambda13:
+    raw_base: /homes/csiebenschuh/data/bio_sequences/_raw
+    curated_base: /homes/csiebenschuh/data/bio_sequences   # curated task datasets
+    models_base: /homes/csiebenschuh/data/bio_sequences    # model caches live beside the data
+  aurora:
+    raw_base: null       # to do: populate once data/models are staged on Aurora
+    curated_base: null
+    models_base: null
+
+# ---------------------------------------------------------------- raw datasets
+
+datasets:
+  nt_tasks:
+    path: _nt_tasks
+    modality: dna
+    source:
+      type: huggingface
+      repo_id: InstaDeepAI/nucleotide_transformer_downstream_tasks_revised
+    notes: >
+      test.parquet is the combined official test split (18 tasks, filter column
+      'task'); official_train/<task>/train.parquet is the official train split
+      at the pinned revision recorded in official_train/download_manifest.json.
+
+  cds:
+    path: _cds
+    modality: dna
+    source:
+      type: huggingface
+      repo_id: InstaDeepAI/true-cds-protein-tasks
+
+  rfam:
+    path: _rfam
+    modality: rna
+    source:
+      type: huggingface
+      repo_id: multimolecule/rfam
+    notes: local README.md was edited after download (notes prepended); payload is data.parquet.
+
+  fish_gue:
+    path: _fish_gue
+    modality: dna
+    source:
+      type: huggingface
+      repo_id: bioinfoihb/Fish_GUE
+
+  gen_lrb:
+    path: _gen_lrb
+    modality: dna
+    source:
+      type: huggingface
+      repo_id: InstaDeepAI/genomics-long-range-benchmark
+    notes: >
+      deliberate subsets (seed 17, caps 7000/1500/1500) and array labels reduced
+      to scalar nanmean for cage/bulk — documented downloader behavior, not a defect.
+
+  plant_gen:
+    path: _plant_gen
+    modality: dna
+    source:
+      type: huggingface
+      repo_id: InstaDeepAI/plant-genomic-benchmark
+
+  rna_dst:
+    path: _rna_dst
+    modality: rna
+    source:
+      type: huggingface
+      repo_id: genbio-ai/rna-downstream-tasks
+
+  proteingym:
+    path: ProteinGym
+    modality: protein
+    source:
+      type: external
+      url: https://proteingym.org
+    expect:
+      - DMS_ProteinGym_substitutions.zip
+      - DMS_ProteinGym_substitutions.zip.sha256
+      - DMS_ProteinGym_substitutions
+
+  crispr_cas9:
+    path: _public_data_crisprCas9
+    modality: dna
+    source:
+      type: github
+      url: https://github.com/dagrate/public_data_crisprCas9
+    expect:
+      - encoded_data_for_experiments.pkl
+
+  sirna_efficacy:
+    path: siRNAEfficacyDB
+    modality: rna
+    source:
+      type: external
+      url: https://cellknowledge.com.cn/siRNAEfficacy/
+    notes: transferred manually (ANL firewall intercepts the host); see provenance.json.
+    expect:
+      - information_all.txt
+      - provenance.json
+
+# ------------------------------------------------- foundation models (backbones)
+# `expect_weights: false` records a KNOWN gap (config/tokenizer cached, weights
+# never downloaded); `revision` pins a commit the audit requires locally
+# (ntv2_50m: the revision hard-coded in ntv2_train.py).
+
+caches:
+  hf: _hf_lm_cache            # primary cache (used by ntv2_train.py / smoke test)
+  dna_rna: _dna_rna_lm_cache  # earlier modality-specific layout, partly duplicates hf
+  protein: _protein_lm_cache
+
+models:
+  ntv2_50m:
+    repo_id: InstaDeepAI/nucleotide-transformer-v2-50m-multi-species
+    modality: dna
+    caches: [hf, dna_rna]
+    revision: 81b29e5786726d891dbf929404ef20adca5b36f1
+
+  ntv3_pretrained:
+    repo_id: InstaDeepAI/NTv3_pretrained
+    modality: dna
+    caches: [hf]
+    revision: fd58207244d828957e633c591f9babd8bb2b970e
+
+  ntv3_100m_pre:
+    repo_id: InstaDeepAI/NTv3_100M_pre
+    modality: dna
+    caches: [hf]
+    revision: fee14f6adbba876b15309e2d635b8a5c7ad88d54
+
+  # code-only companion: NTv3_*_pre/post auto_map resolves classes from this repo
+  ntv3_base_model:
+    repo_id: InstaDeepAI/ntv3_base_model
+    modality: dna
+    caches: [hf]
+    revision: 27682ed2f537a4c4fcc356b6b8201e7dfceca602
+    expect_weights: false
+
+  gena_lm_bert_base:
+    repo_id: AIRI-Institute/gena-lm-bert-base
+    modality: dna
+    caches: [hf, dna_rna]
+
+  hyenadna_tiny_1k:
+    repo_id: LongSafari/hyenadna-tiny-1k-seqlen-hf
+    modality: dna
+    caches: [hf, dna_rna]
+
+  esm2_t6_8m:
+    repo_id: facebook/esm2_t6_8M_UR50D
+    modality: protein
+    caches: [hf, protein]
+
+  esm2_t12_35m:
+    repo_id: facebook/esm2_t12_35M_UR50D
+    modality: protein
+    caches: [hf, protein]
+
+  esm2_t30_150m:
+    repo_id: facebook/esm2_t30_150M_UR50D
+    modality: protein
+    caches: [hf, protein]
+
+  ankh_base:
+    repo_id: ElnaggarLab/ankh-base
+    modality: protein
+    caches: [hf, protein]
+
+  ankh_base_encoder:
+    repo_id: ElnaggarLab/ankh-base-encoder
+    modality: protein
+    caches: [protein]
+    expect_weights: false   # config/tokenizer only; encoder weights never downloaded
+
+  prot_t5_xl_half:
+    repo_id: Rostlab/prot_t5_xl_half_uniref50-enc
+    modality: protein
+    caches: [protein]
+
+  rinalmo_micro:
+    repo_id: multimolecule/rinalmo-micro
+    modality: rna
+    caches: [hf, dna_rna]
+    expect_weights: false   # tokenizer/config only; RNA FM weights never downloaded
+
+  rnafm:   # needs `multimolecule` pkg (contrastive-rna env); weights in hf cache only
+    repo_id: multimolecule/rnafm
+    modality: rna
+    caches: [hf]
+    revision: 7d6e73ad3b48e042b378f9a788a56ccb4d573a27
+
+  splicebert:   # needs `multimolecule` pkg (contrastive-rna env); weights in hf cache only
+    repo_id: multimolecule/splicebert
+    modality: rna
+    caches: [hf]
+    revision: 8e3f4e5088b3bbf76876d8b931078d9f03caffdd
+
+  caduceus_ps_131k:   # trust_remote_code; HARD dep mamba-ssm (no env yet - smoke deferred)
+    repo_id: kuleshov-group/caduceus-ps_seqlen-131k_d_model-256_n_layer-16
+    modality: dna
+    caches: [hf]
+    revision: d89eeb853136ea64da7feb3d0c8e909771b17ae6
+
+  plant_caduceus_l20:   # trust_remote_code; HARD dep mamba-ssm (no env yet - smoke deferred)
+    repo_id: kuleshov-group/PlantCaduceus_l20
+    modality: dna
+    caches: [hf]
+    revision: d1b3c7d42abacce3125f0119adcec161fd8d59bd
+
+  dnabert2_117m:   # trust_remote_code; needs einops (agent/bd3lm env); triton flash-attn optional
+    repo_id: zhihan1996/DNABERT-2-117M
+    modality: dna
+    caches: [hf]
+    revision: 7bce263b15377fc15361f52cfab88f8b586abda0
+
+  esm2_t33_650m:
+    repo_id: facebook/esm2_t33_650M_UR50D
+    modality: protein
+    caches: [hf]
+    revision: 08e4846e537177426273712802403f7ba8261b6c
