@@ -8,3 +8,8 @@ __pycache__/
 _pycache/
 checkpoints/
 *.pt
+
+# AI assistance (if used)
+.claude/
+.codex/
+/attic/

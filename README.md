@@ -1,8 +1,11 @@
-# BiOPAL: $\textcolor{blue}{\textsf{Bi}}\textsf{level }\textcolor{blue}{\textsf{OP}}\textsf{timizer with an }\textcolor{blue}{\textsf{A}}\textsf{gent in the }\textcolor{blue}{\textsf{L}}\textsf{oop}$
+# $\textsf{BiOPAL}$: $\textcolor{blue}{\textsf{Bi}}\textsf{level }\textcolor{blue}{\textsf{OP}}\textsf{timizer with an }\textcolor{blue}{\textsf{A}}\textsf{gent in the }\textcolor{blue}{\textsf{L}}\textsf{oop}$
 
 Bilevel Optimizer with an Agent in the Loop for Sequence Prediction. 
 Based on OPAL in [Reactive Optimizers](https://arxiv.org/abs/2610.33826) ([Bai et al., 2026](#references)).
- 
+
+## Status
+<img src="./assets/under_construction.png" alt="Under construction" width="60%"> 
+
 ## Installation
  
 Click a system to expand its instructions.
