@@ -13,3 +13,7 @@ checkpoints/
 .claude/
 .codex/
 /attic/
+
+# runs
+runs/
+logs/
