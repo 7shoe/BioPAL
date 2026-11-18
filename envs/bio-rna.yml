@@ -27,4 +27,5 @@ dependencies:
       - pytest
       - scikit-learn==1.9.1   # experiments/finetune.py metrics (brings scipy)
       - scipy==1.17.1
+      - optuna==5.1.0          # finetune/hpo.py (GPSampler uses the pinned torch)
       - opal-optimizer==0.3.10
