@@ -1,0 +1,109 @@
+# Model registry: foundation models that passed audit_models.py
+# Generated on 2026-11-18 (machine lambda13); do not edit -
+# regenerate with: python audit_models.py --yaml models.yaml
+# `revision` is the pinned or locally verified commit; caches are
+# keys into paths/paths.yaml, relative to the machine's models_base.
+models:
+  ankh_base:
+    caches:
+    - hf
+    - protein
+    modality: protein
+    repo_id: ElnaggarLab/ankh-base
+    revision: d99cb6b966530dfc2ae96bc69d9255c2a07308b0
+  caduceus_ps_131k:
+    caches:
+    - hf
+    modality: dna
+    repo_id: kuleshov-group/caduceus-ps_seqlen-131k_d_model-256_n_layer-16
+    revision: d89eeb853136ea64da7feb3d0c8e909771b17ae6
+  dnabert2_117m:
+    caches:
+    - hf
+    modality: dna
+    repo_id: zhihan1996/DNABERT-2-117M
+    revision: 7bce263b15377fc15361f52cfab88f8b586abda0
+  esm2_t12_35m:
+    caches:
+    - hf
+    - protein
+    modality: protein
+    repo_id: facebook/esm2_t12_35M_UR50D
+    revision: 6fbf070e65b0b7291e7bbcd451118c216cff79d8
+  esm2_t30_150m:
+    caches:
+    - hf
+    - protein
+    modality: protein
+    repo_id: facebook/esm2_t30_150M_UR50D
+    revision: a695f6045e2e32885fa60af20c13cb35398ce30c
+  esm2_t33_650m:
+    caches:
+    - hf
+    modality: protein
+    repo_id: facebook/esm2_t33_650M_UR50D
+    revision: 08e4846e537177426273712802403f7ba8261b6c
+  esm2_t6_8m:
+    caches:
+    - hf
+    - protein
+    modality: protein
+    repo_id: facebook/esm2_t6_8M_UR50D
+    revision: c731040fcd8d73dceaa04b0a8e6329b345b0f5df
+  gena_lm_bert_base:
+    caches:
+    - hf
+    - dna_rna
+    modality: dna
+    repo_id: AIRI-Institute/gena-lm-bert-base
+    revision: 416f055300346a5830ca49438daf5f4e136ed9a8
+  hyenadna_tiny_1k:
+    caches:
+    - hf
+    - dna_rna
+    modality: dna
+    repo_id: LongSafari/hyenadna-tiny-1k-seqlen-hf
+    revision: e8c1effa8673814e257e627d2e1eda9ea5a373f6
+  ntv2_50m:
+    caches:
+    - hf
+    - dna_rna
+    modality: dna
+    repo_id: InstaDeepAI/nucleotide-transformer-v2-50m-multi-species
+    revision: 81b29e5786726d891dbf929404ef20adca5b36f1
+  ntv3_100m_pre:
+    caches:
+    - hf
+    modality: dna
+    repo_id: InstaDeepAI/NTv3_100M_pre
+    revision: fee14f6adbba876b15309e2d635b8a5c7ad88d54
+  ntv3_pretrained:
+    caches:
+    - hf
+    modality: dna
+    repo_id: InstaDeepAI/NTv3_pretrained
+    revision: fd58207244d828957e633c591f9babd8bb2b970e
+  plant_caduceus_l20:
+    caches:
+    - hf
+    modality: dna
+    repo_id: kuleshov-group/PlantCaduceus_l20
+    revision: d1b3c7d42abacce3125f0119adcec161fd8d59bd
+  prot_t5_xl_half:
+    caches:
+    - protein
+    modality: protein
+    repo_id: Rostlab/prot_t5_xl_half_uniref50-enc
+    revision: 94a6abc029ae13029317b140b7424e012bf8dfbf
+  rnafm:
+    caches:
+    - hf
+    modality: rna
+    repo_id: multimolecule/rnafm
+    revision: 7d6e73ad3b48e042b378f9a788a56ccb4d573a27
+  splicebert:
+    caches:
+    - hf
+    modality: rna
+    repo_id: multimolecule/splicebert
+    revision: 8e3f4e5088b3bbf76876d8b931078d9f03caffdd
