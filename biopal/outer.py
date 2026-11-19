@@ -135,6 +135,10 @@ class Outer:
                    trial_updates=self.horizon)
         print(f"[biopal] OPAL decisions at updates {self.decisions}; gates after updates {self.gates}"
               + (f" (no room for a {self.horizon}-update trial at {dropped})" if dropped else ""), flush=True)
+        if self.gates and t.device != "cpu" and getattr(args, "det", "strict") != "strict":
+            print("[biopal] without --det strict a trial may not repeat bit for bit on the GPU (seen on ESM2, whose "
+                  "attention kernel is then not deterministic); the committed updates can drift from the scored branch",
+                  flush=True)
 
     def write(self, **record):
         self.log.write(json.dumps(record) + "\n")

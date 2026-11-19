@@ -78,10 +78,13 @@ def trace(run, gate=None):
     if trial and step in losses:
         won = next((b for b in trial["branches"] if decision["adopted"] and (b["action"], b["target"]) == (
             decision["action"], decision["target"])), trial["incumbent"])
-        same = "the same value as" if won["losses"][0] == losses[step] else "close to" if abs(
-            won["losses"][0] - losses[step]) < 1e-3 else "NOT equal to"
-        print(f"\n5. Next committed update {step}: training loss {losses[step]:.6f}, {same} the first update of the "
-              f"{'adopted' if decision['adopted'] else 'incumbent'} branch ({won['losses'][0]:.6f}).")
+        redone = [losses[step + i] for i in range(len(won["losses"])) if step + i in losses]
+        equal = next((i for i, (a, b) in enumerate(zip(redone, won["losses"])) if a != b), len(redone))
+        same = f"all {equal} recorded updates of the window repeat" if equal == len(redone) else (
+            f"only the first {equal} of {len(redone)} updates repeat (largest loss difference "
+            f"{max(abs(a - b) for a, b in zip(redone, won['losses'])):.2g}; the GPU arithmetic was not reproducible)")
+        print(f"\n5. Next committed update {step}: training loss {losses[step]:.6f}. Training went on from the "
+              f"snapshot: {same} the {'adopted' if decision['adopted'] else 'incumbent'} branch exactly.")
     elif step in losses:
         print(f"\n5. Next committed update {step}: training loss {losses[step]:.6f}.")
 

@@ -279,5 +279,5 @@ def test_trace_prints_one_gate_from_diagnostics_to_the_next_committed_update(tmp
     trace(tmp_path)
     out = capsys.readouterr().out
     for part in ("Gate 1 after update 30", "1. Checkpoint", "2. Proposals", "set_cohort gc:high [informed]",
-                 "set_cohort label:1 [masked]", "4. Decision", "5. Next committed update 31", "the same value as"):
+                 "set_cohort label:1 [masked]", "4. Decision", "5. Next committed update 31", "all 8 recorded updates of the window repeat the incumbent branch exactly"):
         assert part in out

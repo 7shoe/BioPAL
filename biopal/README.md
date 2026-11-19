@@ -37,13 +37,13 @@ the two budgets are ceilings over every run that names the same ledger file.
 # offline: gates, trial and rewind with a scripted expert that keeps; no Claude call
 echo '{"informed": []}' > /tmp/keep.json
 python finetune.py --model ntv2_50m --task nt_tasks_official_splice_sites_donors --limit 6000 --epochs 1 \
-  --mode keep --panel-frac 0.15 --bio-policy expert --expert-script /tmp/keep.json \
+  --det strict --mode keep --panel-frac 0.15 --bio-policy expert --expert-script /tmp/keep.json \
   --outer-decisions 1 --outer-steps 32 --outer-audit 16 32 --no-test --out runs/smoke_offline
 
 # live: 3 OPAL decisions, 2 gates with an informed and a masked expert (about $0.012 in total)
 OPAL_MODEL=claude-haiku-5-5 OPAL_EFFORT=low python finetune.py --model esm2_t12_35m \
-  --task proteingym_gfp_fluorescence --limit 8000 --epochs 1 --mode biopal --bio-policy expert --outer both \
-  --expert-shadow masked --decisions 3 --outer-decisions 2 --outer-steps 32 \
+  --task proteingym_gfp_fluorescence --limit 8000 --epochs 1 --det strict --mode biopal --bio-policy expert \
+  --outer both --expert-shadow masked --decisions 3 --outer-decisions 2 --outer-steps 32 \
   --expert-model claude-haiku-5-5 --expert-effort low --budget 0.20 --expert-budget 0.20 \
   --ledger runs/smoke_ledger.jsonl --out runs/smoke_live
 python -m biopal runs/smoke_live        # from the repo root: the trace of the first gate with a trial
@@ -57,8 +57,8 @@ placeholders first; the OPAL model and effort are read from the environment (`fi
 
 ```bash
 export OPAL_MODEL=<model> OPAL_EFFORT=<effort>; OPAL_USD=<cap>; EXPERT_USD=<cap>
-D="--model ntv2_50m --task nt_tasks_official_splice_sites_donors --epochs 2 --seed 42 --panel-frac 0.15"
-G="--model esm2_t12_35m --task proteingym_gfp_fluorescence --epochs 1 --seed 42 --panel-frac 0.15"
+D="--model ntv2_50m --task nt_tasks_official_splice_sites_donors --epochs 2 --seed 42 --panel-frac 0.15 --det strict"
+G="--model esm2_t12_35m --task proteingym_gfp_fluorescence --epochs 1 --seed 42 --panel-frac 0.15 --det strict"
 F="--mode biopal --bio-policy expert --outer both --expert-shadow masked --expert-budget $EXPERT_USD"
 
 python finetune.py $D --mode plain                                         --out runs/pilot/donors_A
@@ -74,6 +74,11 @@ python finetune.py $D --mode keep --outer-audit 16 32 64 128               --out
 
 Budgets are per run. Add `--ledger runs/pilot/ledger.jsonl` to every command to make them ceilings over the
 whole pilot. `--expert-model` and `--expert-effort` default to `claude-haiku-5-5` and `low`.
+
+`--det strict` belongs in every arm. A gate rewinds to a snapshot and trains on from it, and that only repeats bit
+for bit when the GPU arithmetic does. With the default `--det warn`, ESM2's attention kernel is not deterministic:
+on full GFP the same configuration run twice from one snapshot differed by 1e-7 in the training loss after 9 to 94
+updates and by up to 0.15 in the private loss after 128. NTv2 repeated exactly in both modes.
 
 ## What a run writes
 
@@ -105,3 +110,8 @@ conda run -n biopal-v2 python -m pytest tests/biopal -q      # CPU, about 40 s, 
   if a later version changes that.
 - After a readout switch the optimizer keeps its statistics from before the switch.
 - A is read at every gate, so it becomes tuning data over a run. Validation and test are never touched by a gate.
+- The adoption rule's standard error counts only the sampling of rows in A, not how much a short training
+  window varies from one run to the next. In the full-data audits (`--outer-audit 16 32 64 128`, keep backend) 25
+  to 60% of all cohort options passed at any one horizon, the sign of the difference often flipped between
+  horizons, and the differences at two horizons were uncorrelated. A pass in a single trial is therefore weak
+  evidence on these two tasks; see the audit before trusting an adoption.
