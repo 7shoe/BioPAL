@@ -238,6 +238,8 @@ class Outer:
         self.restore(snap)
         self.apply(action, m)
         out = dict(losses=[], A={})
+        if action[0] in ("set_readout", "refit_head"):   # the installed head must give the probe's loss on every row
+            out["install_error"] = float(np.abs(self.t.rows(self.s.D)[0] - m["probe_loss"][action[1]]).max())
         for i, indices in enumerate(batches[:max(horizons)], 1):
             out["losses"].append(self.t.update(indices, self.weights(indices)).item())
             if i in horizons:
@@ -320,6 +322,7 @@ class Outer:
                 if "failed" in scored[action]:
                     r["failed"] = scored[action]["failed"]
                 else:
+                    r.update({k: v for k, v in scored[action].items() if k == "install_error"})
                     r.update(losses=scored[action]["losses"],
                              horizons={h: verdict(scored[action]["A"][h], incumbent["A"][h]) for h in horizons})
             informed = proposals.get("informed", {})

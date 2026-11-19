@@ -147,3 +147,4 @@ def test_readout_menu_follows_outer_flag_and_audit_tries_layers(tmp_path):
     assert [(b["action"], b["target"]) for b in branches] == [("set_readout", 2), ("set_readout", 3),
                                                               ("refit_head", 4), ("incumbent_repeat", None)]
     assert all(np.isfinite(b["horizons"]["4"]["mean_d"]) for b in branches)
+    assert all(b["install_error"] < 1e-4 for b in branches[:3]) and "install_error" not in branches[3]

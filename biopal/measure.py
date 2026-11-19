@@ -66,8 +66,8 @@ def checkpoint(rows, s, layers=(), current=None):
              (aligned with s.D), s.classification, s.num_out
     layers   hidden states to probe; `current` is the one that feeds the head now
 
-    Returns the gap table, the fitted probes (a probe can become the task head), the pooled outputs of `current`
-    on the fit sample, and the mean loss on D.
+    Returns the gap table, the fitted probes (a probe can become the task head) with their per-row loss on D, the
+    pooled outputs of `current` on the fit sample, and the mean loss on D.
     """
     loss_d, feat_d = rows(s.D, layers)
     loss_f, feat_f = rows(s.F, layers)
@@ -84,5 +84,6 @@ def checkpoint(rows, s, layers=(), current=None):
         for kind, layer, gap in found:
             table.append(dict(id=f"r{len(table) + 1:02d}", measurement=kind, layer=layer, cohort=name,
                               n=int(d.sum()), **gap))
-    return dict(table=table, probes=probes, head_input=feat_f.get(current), panel_loss=float(loss_d.mean()),
+    return dict(table=table, probes=probes, probe_loss=probe_loss, head_input=feat_f.get(current),
+                panel_loss=float(loss_d.mean()),
                 fit_loss=float(loss_f.mean()))

@@ -80,8 +80,9 @@ whole pilot. `--expert-model` and `--expert-effort` default to `claude-haiku-5-5
 - `outer.jsonl`: one line per event. `schedule` (OPAL decisions and gates as placed), `shown_to_opal` (what OPAL
   was shown before each decision), and per gate `table` (the measurements and the actions on offer), `proposals`
   (written and synced before the private set is read), `trial` (per branch: training losses and, per horizon,
-  the mean loss difference on A, its standard error and whether it passes), `decision`, and `bypassed` (after a
-  readout switch: the tensors that got no gradient did not move).
+  the mean loss difference on A, its standard error and whether it passes; for a readout branch also
+  `install_error`, the largest per-row difference on D between the installed head and the probe it came from),
+  `decision`, and `bypassed` (after a readout switch: the tensors that got no gradient did not move).
 - `expert/gateN_ROLE_brief.txt` and `_reply.json`: what each expert read and what the CLI returned.
 - `result.json`, key `biopal`: adopted changes, final configuration, Claude spend by role, OPAL agent calls inside
   trial branches (must be 0), and the readout block `best.pt` was saved with.
