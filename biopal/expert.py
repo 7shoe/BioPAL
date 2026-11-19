@@ -1,6 +1,7 @@
 """BiOPAL's biological expert: one proposal per gate.
 
-An answer is a dict with `action` (set_cohort, ordinary_weighting or keep) and `target` (the cohort; "" otherwise).
+An answer is a dict with `action` (set_cohort, ordinary_weighting, set_readout or keep) and `target` (the cohort,
+or the block; "" otherwise).
 Scripted answers stand in for the Claude call in tests and offline runs.
 """
 import json
@@ -24,6 +25,6 @@ def check(answer, menu):
     action, target = answer.get("action"), answer.get("target") or None
     if action == "keep" or (action == "ordinary_weighting" and menu.get("ordinary_weighting")):
         return action, None
-    if action in ("set_cohort",) and target in menu.get(action, []):
+    if action in ("set_cohort", "set_readout") and target in menu.get(action, []):
         return action, target
     raise ValueError(f"unavailable action: {action} {target}")

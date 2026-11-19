@@ -12,7 +12,7 @@ import torch.nn.functional as F
 
 from biopal import outer, panel
 
-FLAGS = dict(seed=0, bio_policy="off", check_every=10, ledger=None, outer="cohort", outer_decisions=2, outer_steps=8,
+FLAGS = dict(seed=0, bio_policy="off", check_every=10, ledger=None, outer="both", outer_decisions=2, outer_steps=8,
              outer_alpha=.2, outer_audit=None, expert_shadow="none", expert_script=None)
 
 
@@ -52,7 +52,7 @@ def make(tmp_path, backend="keep", classification=True, epochs=3, batch_size=16,
     ids = torch.tensor([["ACGT".index(c) for c in s] for s in frame.sequence])
     y = torch.tensor(frame.y.to_numpy(), dtype=torch.long if classification else torch.float32)
     backbone, num_out = Backbone(), 2 if classification else 1
-    net = torch.nn.ModuleDict(dict(backbone=backbone, head=torch.nn.Linear(16, num_out)))
+    net = torch.nn.ModuleDict(dict(backbone=backbone, head=torch.nn.Linear(16, num_out), readout=outer.Readout(16)))
     per_epoch = math.ceil(len(roles["F"]) / batch_size)
     total = epochs * per_epoch
     base = torch.optim.AdamW(net.parameters(), lr=3e-3, weight_decay=.05)
@@ -69,8 +69,8 @@ def make(tmp_path, backend="keep", classification=True, epochs=3, batch_size=16,
                 else F.mse_loss(out.squeeze(-1), target, reduction="none"))
 
     def predict(x, layers=None):
-        hs = backbone(x)
-        out = net["head"](hs[-1].mean(1))
+        hs, route = backbone(x), int(net["readout"].layer)
+        out = net["head"](net["readout"](hs[route].mean(1)) if route >= 0 else hs[-1].mean(1))
         return (out, {k: hs[k].mean(1) for k in layers}) if layers else out
 
     def update(indices, weights=None):

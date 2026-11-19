@@ -9,20 +9,21 @@ Losses are the training loss per row: cross-entropy, or squared error on the sta
 import warnings
 
 import numpy as np
-from sklearn.linear_model import LogisticRegression, Ridge
+from sklearn.linear_model import LogisticRegressionCV, RidgeCV
 
 MIN_ROWS = 32   # a cohort is measured, and can be proposed, only with this many rows in both samples
 
 
 def fit_linear(X, y, classification, num_out):
-    """Standardize X and fit a linear model (logistic or ridge). The result is written as weights of a task head:
-    coef (num_out, d) and intercept (num_out,) on the standardized input."""
+    """Standardize X and fit a linear model (logistic or ridge); the strength of its L2 penalty is chosen by
+    cross-validation on the same rows, so that the model can also serve as a task head. The result is written as
+    head weights: coef (num_out, d) and intercept (num_out,) on the standardized input."""
     mean, sd = X.mean(0), X.std(0) + 1e-6
     Z = (X - mean) / sd
     with warnings.catch_warnings():
         warnings.simplefilter("ignore")
         if classification:
-            m = LogisticRegression(C=1.0, max_iter=2000).fit(Z, y)
+            m = LogisticRegressionCV(Cs=np.logspace(-4, 0, 5), cv=3, scoring="neg_log_loss", max_iter=1000).fit(Z, y)
             coef, icpt = np.zeros((num_out, X.shape[1])), np.full(num_out, -30.)   # a class without rows: never
             if len(m.classes_) == 2:   # one logit in scikit-learn: two logits with the same probabilities
                 coef[m.classes_], icpt[m.classes_] = np.concatenate([-m.coef_, m.coef_]) / 2, np.concatenate(
@@ -30,7 +31,7 @@ def fit_linear(X, y, classification, num_out):
             else:
                 coef[m.classes_], icpt[m.classes_] = m.coef_, m.intercept_
         else:
-            m = Ridge(alpha=1.0).fit(Z, y)
+            m = RidgeCV(alphas=np.logspace(-2, 4, 13)).fit(Z, y)
             coef, icpt = m.coef_[None], np.array([m.intercept_])
     return dict(mean=mean, sd=sd, coef=coef, intercept=icpt, sklearn=m)
 

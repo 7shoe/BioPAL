@@ -155,7 +155,7 @@ def test_a_rejected_proposal_leaves_the_run_bitwise_as_if_uninterrupted(tmp_path
     t.rows = lambda i, layers=None: (calls_at_scoring.append(len(seen)) if i is bio.s.A else None, real(i, layers))[1]
     losses, summary = toy.train(args, t, bio)
     assert losses == reference                                          # model, OPAL state, scheduler and RNG all rewound
-    assert summary["adopted"] == [] and summary["final_config"] == dict(cohort=None)
+    assert summary["adopted"] == [] and summary["final_config"]["cohort"] is None
     assert summary["opal_calls_in_trials"] == 0 and getattr(t.optimizer, "max_decisions", None) == cap
     trials = events(tmp_path / "b", "trial")
     assert [len(tr["branches"]) for tr in trials] == [1, 1]
@@ -175,7 +175,7 @@ def test_a_winning_proposal_is_adopted_persists_and_commits_the_branch_state(tmp
     score(bio, t, lambda active: -1. if active else 0.)                 # weighting any cohort wins on A
     losses, summary = toy.train(args, t, bio)
     assert summary["adopted"] == [dict(gate=0, update=30, action="set_cohort", target="gc:high")]
-    assert summary["final_config"] == dict(cohort="gc:high")           # gate 2 proposed going back, lost, so it stays
+    assert summary["final_config"]["cohort"] == "gc:high"           # gate 2 proposed going back, lost, so it stays
     first, second = events(tmp_path / "b", "trial")
     assert first["branches"][0]["losses"] == losses[30:38]              # training continues exactly as the winning branch
     assert first["incumbent"]["losses"] != losses[30:38]
@@ -244,7 +244,7 @@ def test_shadow_proposal_is_scored_once_never_adopted_and_never_shown_as_rejecte
     assert [b["by"] for b in first["branches"]] == [["informed", "masked"]]          # the same action: one branch
     assert [b["by"] for b in second["branches"]] == [["informed"], ["masked"]]
     assert order == [1, 1, 2, 2, 2]                                     # one candidate + incumbent, then two + incumbent
-    assert summary["adopted"] == [] and summary["final_config"] == dict(cohort=None)
+    assert summary["adopted"] == [] and summary["final_config"]["cohort"] is None
     shadow = [h for h in bio.history if h["role"] == "masked"]
     assert [h["outcome"] for h in shadow] == ["did not pass", "passed"]  # its own trial result, not "not adopted"
     assert [h["outcome"] for h in bio.history if h["role"] == "informed"] == ["did not pass", "did not pass"]

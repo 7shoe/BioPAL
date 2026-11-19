@@ -144,8 +144,9 @@ def main():
                    help="off: OPAL sees the loss on D. fixed: also the whole-panel baseline and "
                         "generalization gaps. expert: OPAL sees what off shows, and an expert "
                         "proposes changes to the training configuration at gates")
-    b.add_argument("--outer", choices=["off", "cohort"], default="cohort",
-                   help="what the expert may change: the cohort whose rows weigh more")
+    b.add_argument("--outer", choices=["off", "cohort", "readout", "both"], default="both",
+                   help="what the expert may change: the cohort whose rows weigh more in the "
+                        "loss, the block that feeds the task head, or either (one per gate)")
     b.add_argument("--outer-decisions", type=int, default=5, help="gates per run")
     b.add_argument("--outer-steps", type=int, default=64,
                    help="updates of the matched trial at a gate")
@@ -375,11 +376,15 @@ def main():
 
     def predict(batch, layers=None):
         """Task output. With `layers` (BiOPAL layer probes) also the pooled output of those
-        hidden states, from the same forward pass."""
-        if not layers:
+        hidden states, from the same forward pass. After a BiOPAL readout switch the head
+        reads the chosen block instead of the backbone's default output."""
+        route = int(net["readout"].layer) if "readout" in net else -1
+        if route < 0 and not layers:
             return head(pool(forward_hidden(base, batch), batch))
         hs = base(**batch, output_hidden_states=True).hidden_states
-        return head(pool(hs[-1], batch)), {k: pool(hs[k], batch) for k in layers}
+        out = head(net["readout"](pool(hs[route], batch)) if route >= 0
+                   else pool(hs[-1], batch))
+        return (out, {k: pool(hs[k], batch) for k in layers}) if layers else out
 
     with torch.no_grad():  # re-encode the probe: encode() honors pad_multiple
         hidden_size = forward_hidden(
@@ -392,6 +397,8 @@ def main():
         from biopal import outer as bio_outer
         blocks = bio_outer.blocks(
             base, encode(frames["train"]["sequence"].head(2).tolist()), forward_hidden)
+        if blocks:  # the route of a readout switch travels with the weights (best.pt)
+            net["readout"] = bio_outer.Readout(hidden_size).to(device)
 
     def batch(split, indices):
         rows = frames[split].iloc[np.asarray(indices)]
@@ -647,6 +654,8 @@ def main():
     if not args.max_steps:
         net.load_state_dict(torch.load(args.out / "best.pt", map_location=device,
                                        weights_only=True))
+        if bio:
+            bio_summary["best_readout_block"] = bio.block()  # the route best.pt was saved with
         if not args.no_test:
             test = evaluate("test")
         tok.save_pretrained(args.out / "tokenizer")

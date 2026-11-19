@@ -4,13 +4,14 @@ OPAL owns the update rule and sees the plain training loss, the loss on the diag
 feeds the task head. This module shows OPAL those values before each of its decisions.
 
 At a gate the outer level measures the checkpoint, asks the expert for one change to the training configuration
-(here: which cohort's rows weigh more in the loss), and tests it: from one snapshot, the next K updates are run
+(which cohort's rows weigh more in the loss, or which block feeds the task head), and tests it: from one snapshot, the next K updates are run
 with the change and without it, through the trainer's own update function, and both end states are scored per
 row on the private set A. The change is adopted only if the mean loss difference is below minus one standard
 error. Training then continues from the snapshot under the winning configuration, so the trial itself leaves no
 trace in the model, in OPAL's state, or in what OPAL's agent is told.
 """
 import copy
+import hashlib
 import json
 import math
 import os
@@ -23,6 +24,20 @@ from . import expert, ledger, measure, panel
 
 SAMPLE = 2048   # fixed diagnostic and fit rows measured at every checkpoint
 KEEP = ("keep", None)
+
+
+class Readout(torch.nn.Module):
+    """Which hidden state feeds the task head (-1: the backbone's default output) and a fixed rescaling of it.
+    Buffers, so every checkpoint and every trial snapshot carries the route with the weights."""
+
+    def __init__(self, width):
+        super().__init__()
+        self.register_buffer("layer", torch.tensor(-1))
+        self.register_buffer("mu", torch.zeros(width))
+        self.register_buffer("scale", torch.ones(width))
+
+    def forward(self, pooled):
+        return (pooled - self.mu) * self.scale
 
 
 def spaced(total, n, every, lo=.15, hi=.85):
@@ -96,6 +111,10 @@ class Outer:
         self.s.base = measure.linear_loss(simple, comp[self.s.D], t.y[self.s.D], t.classification)
         self.decisions = [int(u) for u in getattr(t.optimizer, "schedule", [])]   # as OPAL resolved them
         self.cohort, self.W = None, None                # the active configuration: which cohort weighs more
+        self.layers = []                                # blocks that are probed and can feed the head
+        if t.blocks and "readout" in t.net:
+            self.layers = sorted({t.blocks // 2, 3 * t.blocks // 4, t.blocks})
+        self.frozen, self.idle_ok = None, None          # parameter digests since a readout switch; all checks passed
         self.history, self.adopted, self.trial_calls, self.rewound_cost = [], [], 0, 0.
         self.audit = sorted(args.outer_audit) if args.outer_audit is not None else None
         self.horizon = max([args.outer_steps] + (self.audit or []))
@@ -116,7 +135,7 @@ class Outer:
 
     # ------------------------------------------------------------------ the training configuration
     def config(self):
-        return dict(cohort=self.cohort)
+        return dict(cohort=self.cohort, readout_block=self.block())
 
     def set_cohort(self, cohort):
         """Rows of the cohort weigh (1 - alpha) + alpha / share, all others 1 - alpha: the mean weight over the
@@ -127,10 +146,48 @@ class Outer:
             w = (1 - alpha) + alpha * mask / mask[self.t.roles["F"]].mean()
             self.W = torch.tensor(w, dtype=torch.float32, device=self.t.device)
 
+    def install(self, layer, m):
+        """Readout switch: the linear probe fitted on `layer` at this checkpoint becomes the task head. The probe's
+        standardization is stored with the model, rescaled so that the head's input keeps its overall size (the
+        optimizer's statistics for the head then stay of the right order). Blocks above `layer` stay in the model;
+        they are no longer part of the forward pass, so they get no gradient and do not move."""
+        p, head, r = m["probes"][layer], self.t.net["head"], self.t.net["readout"]
+
+        def tensor(x):
+            return torch.as_tensor(np.asarray(x), dtype=head.weight.dtype, device=head.weight.device)
+
+        with torch.no_grad():
+            was = tensor(m["head_input"])
+            size = float((r(was) if int(r.layer) >= 0 else was).pow(2).mean().sqrt())
+            head.weight.copy_(tensor(p["coef"] / size))
+            head.bias.copy_(tensor(p["intercept"]))
+            r.mu.copy_(tensor(p["mean"]))
+            r.scale.copy_(tensor(size / p["sd"]))
+            r.layer.fill_(layer)
+
     def apply(self, action, m):
         kind, target = action
         if kind in ("set_cohort", "ordinary_weighting"):
             self.set_cohort(target)
+        elif kind in ("set_readout", "refit_head"):
+            self.install(target, m)
+
+    def digest(self):
+        return {n: hashlib.sha256(p.detach().cpu().numpy().tobytes()).hexdigest()
+                for n, p in self.t.net.named_parameters() if p.requires_grad}
+
+    def idle_check(self, where):
+        """After a readout switch: a parameter that got no gradient at the last update must not have moved since
+        the previous check, whatever program OPAL runs."""
+        if self.frozen is None:
+            return
+        now = self.digest()
+        idle = [n for n, p in self.t.net.named_parameters() if p.requires_grad and p.grad is None]
+        moved = [n for n in idle if now[n] != self.frozen[n]]
+        self.idle_ok = not moved and self.idle_ok is not False
+        self.write(event="bypassed", at=where, readout_block=self.block(), idle_tensors=len(idle), moved=moved[:10],
+                   unchanged=not moved)
+        self.frozen = now
 
     def menu(self, m):
         """The changes on offer at this gate. A cohort can be proposed if it was measured (enough rows)."""
@@ -139,6 +196,8 @@ class Outer:
         if self.args.outer in ("cohort", "both"):
             out["set_cohort"] = [c for c in self.s.cohorts if c in measured and c != self.cohort]
             out["ordinary_weighting"] = self.cohort is not None
+        if self.args.outer in ("readout", "both") and self.layers:
+            out["set_readout"] = [k for k in self.layers if k != self.block()]
         return out
 
     # ------------------------------------------------------------------ snapshot, branch, gate
@@ -194,7 +253,8 @@ class Outer:
         """Called after `update` when it is a gate; `batches` are the row indices of the updates that follow in
         this epoch. Leaves the trainer at the same update, under the configuration that won."""
         a, o, i = self.args, self.t.optimizer, self.gates.index(update)
-        m = measure.checkpoint(self.t.rows, self.s)
+        self.idle_check(f"gate {i}")
+        m = measure.checkpoint(self.t.rows, self.s, self.layers, self.block())
         menu = self.menu(m)
         self.write(event="table", gate=i, update=update, config=self.config(), table=m["table"],
                    panel_loss=m["panel_loss"], fit_loss=m["fit_loss"], menu=menu)
@@ -207,7 +267,10 @@ class Outer:
             if p["action"] != "keep":
                 by.setdefault((p["action"], p["target"]), []).append(role)
         if self.audit:
-            for action in [("set_cohort", c) for c in menu.get("set_cohort", [])] + [("incumbent_repeat", None)]:
+            options = [("set_cohort", c) for c in menu.get("set_cohort", [])]
+            options += [("set_readout", k) for k in menu.get("set_readout", [])]
+            options += [("refit_head", self.block())] * ("set_readout" in menu)   # the same block, head refitted
+            for action in options + [("incumbent_repeat", None)]:
                 by.setdefault(action, []).append("audit")
         horizons = sorted(set(self.audit or []) | {a.outer_steps})
         results, adopt, changed = {}, None, False
@@ -247,6 +310,8 @@ class Outer:
                     informed.get("force") or won.get("horizons", {}).get(a.outer_steps, {}).get("passes")):
                 adopt = (informed["action"], informed["target"])
                 self.apply(adopt, m)
+                if adopt[0] == "set_readout":
+                    self.frozen = self.digest()
                 self.adopted.append(dict(gate=i, update=update, action=adopt[0], target=adopt[1]))
             self.write(event="trial", gate=i, update=update, trial_updates=a.outer_steps,
                        incumbent=dict(losses=incumbent["losses"],
@@ -272,7 +337,8 @@ class Outer:
 
     def block(self):
         """Index of the block that feeds the task head (the last one unless a readout switch was adopted)."""
-        return self.t.blocks
+        route = int(self.t.net["readout"].layer) if "readout" in self.t.net else -1
+        return route if route >= 0 else self.t.blocks
 
     def weights(self, indices):
         """Per-row loss weights of the active configuration for one batch; None means the ordinary mean."""
@@ -296,9 +362,11 @@ class Outer:
     def close(self):
         """After OPAL closed: charge its spend to the ledger; returns the summary for result.json."""
         worker = getattr(self.t.optimizer, "worker", None)
+        self.idle_check("end of training")
         cost = (float(worker.cost) if worker is not None else 0.) + self.rewound_cost
         if cost:
             ledger.charge(self.args.ledger, "opal", cost, run=str(self.t.out))
         self.log.close()
         return dict(opal_decisions=self.decisions, opal_cost_usd=cost, gates=self.gates, adopted=self.adopted,
-                    final_config=self.config(), opal_calls_in_trials=self.trial_calls)
+                    final_config=self.config(), opal_calls_in_trials=self.trial_calls,
+                    bypassed_unchanged=self.idle_ok)
