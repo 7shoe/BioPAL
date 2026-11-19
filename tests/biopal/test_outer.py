@@ -226,6 +226,82 @@ def test_a_non_finite_incumbent_fails_the_run(tmp_path):
     assert events(tmp_path, "incumbent_failed")[0]["gate"] == 0
 
 
+FORCED = dict(action="set_cohort", target="gc:high", force=True)
+
+
+def test_scripted_force_adopts_a_scored_candidate_that_lost(tmp_path):
+    args, t, bio = toy.make(tmp_path, bio_policy="expert", expert_script=script(tmp_path, informed=[FORCED]))
+    score(bio, t, lambda active: 1. if active else 0.)                  # scored, and clearly worse on A
+    _, summary = toy.train(args, t, bio)
+    first = events(tmp_path, "decision")[0]
+    assert summary["adopted"] == [dict(gate=0, update=30, action="set_cohort", target="gc:high")]
+    assert first["forced"] is True and first["proposals"]["informed"]["outcome"] == "did not pass"
+
+
+def test_scripted_force_cannot_install_a_failed_candidate(tmp_path):
+    args, t, bio = toy.make(tmp_path, bio_policy="expert", expert_script=script(tmp_path, informed=[FORCED]))
+    score(bio, t, lambda active: np.nan if active else 0.)              # the candidate's loss on A is not finite
+    _, summary = toy.train(args, t, bio)
+    first = events(tmp_path, "decision")[0]
+    assert summary["adopted"] == [] and first["forced"] is False
+    assert first["proposals"]["informed"]["outcome"] == "failed"
+
+
+@pytest.mark.filterwarnings("ignore:Degrees of freedom", "ignore:invalid value encountered")
+def test_scripted_force_needs_a_finite_mean_and_standard_error(tmp_path):
+    args, t, bio = toy.make(tmp_path, bio_policy="expert", expert_script=script(tmp_path, informed=[FORCED]))
+    bio.s.A = bio.s.A[:1]                                               # one private row: no standard error
+    _, summary = toy.train(args, t, bio)
+    first = events(tmp_path, "decision")[0]
+    trial = first["proposals"]["informed"]["trial"]
+    assert np.isfinite(trial["mean_d"]) and np.isnan(trial["se"])       # a verdict exists, but it is not a score
+    assert summary["adopted"] == [] and first["forced"] is False
+    assert outer.is_scored(dict(mean_d=-1., se=.1)) and not outer.is_scored(None)
+    assert not outer.is_scored(dict(mean_d=-1., se=float("nan"))) and not outer.is_scored(dict(mean_d=float("inf"), se=.1))
+
+
+class Stub:
+    """An expert that is not scripted: a full answer with whatever `extra` fields ride along."""
+    cost = calls = 0
+
+    def __init__(self, **extra):
+        self.extra = extra
+
+    def propose(self, role, gate, text):
+        return dict(layer_evidence="none", evidence_rows=[], action="set_cohort", target="gc:high",
+                    predicted_sign="lower", hypothesis="h", **self.extra)
+
+
+def test_only_a_scripted_expert_can_force(tmp_path):
+    args, t, bio = toy.make(tmp_path, bio_policy="expert", expert_script=script(tmp_path, informed=[]))
+    bio.expert = Stub(force=True)
+    score(bio, t, lambda active: 1. if active else 0.)
+    _, summary = toy.train(args, t, bio)
+    assert summary["adopted"] == [] and events(tmp_path, "decision")[0]["forced"] is False
+    assert "force" not in events(tmp_path, "proposals")[0]["informed"]
+
+
+def test_a_reply_cannot_write_the_trainers_own_fields(tmp_path):
+    args, t, bio = toy.make(tmp_path, bio_policy="expert", expert_script=script(tmp_path, informed=[]))
+    bio.expert = Stub(ok=False, error="made up", outcome="passed", sign_correct=True, trial=dict(passes=True))
+    score(bio, t, lambda active: 1. if active else 0.)
+    toy.train(args, t, bio)
+    said = events(tmp_path, "proposals")[0]["informed"]
+    assert set(said) == {"layer_evidence", "evidence_rows", "action", "target", "predicted_sign", "hypothesis", "ok"}
+    assert said["ok"] is True
+    p = events(tmp_path, "decision")[0]["proposals"]["informed"]
+    assert p["error"] is None and p["outcome"] == "did not pass" and p["sign_correct"] is False
+
+
+def test_a_minimal_scripted_plan_needs_only_action_and_target(tmp_path):
+    plan = script(tmp_path, informed=[dict(action="set_readout", target=2)], masked=[cohort("gc:high")])
+    args, t, bio = toy.make(tmp_path, bio_policy="expert", expert_shadow="masked", expert_script=plan)
+    toy.train(args, t, bio)
+    first = events(tmp_path, "proposals")[0]
+    assert first["informed"] == dict(action="set_readout", target=2, ok=True)        # an integer block
+    assert first["masked"] == dict(action="set_cohort", target="gc:high", ok=True)   # a real cohort name
+
+
 def test_shadow_proposal_is_scored_once_never_adopted_and_never_shown_as_rejected(tmp_path):
     plan = script(tmp_path, informed=[cohort("gc:high"), cohort("gc:low")], masked=[cohort("gc:high"), cohort("label:1")])
     args, t, bio = toy.make(tmp_path, bio_policy="expert", expert_shadow="masked", expert_script=plan)

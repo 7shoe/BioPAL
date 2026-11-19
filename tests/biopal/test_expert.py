@@ -26,12 +26,16 @@ if mode == "junk":
     answer = dict(action="dance")
 if mode == "unavailable":
     answer["target"] = "no_such_cohort"
+if mode.startswith("force"):
+    answer["force"] = True
 out = dict(type="result", is_error=mode == "error", result="it failed" if mode == "error" else json.dumps(answer),
            total_cost_usd=float(os.environ.get("FAKE_COST", "0.012")),
            modelUsage={"claude-opus-5-5" if mode == "other_model" else model: {}})
 if mode == "helper":
     out["modelUsage"] = {model: {"costUSD": .011}, "claude-haiku-5-5": {"costUSD": .001}}
-if mode != "text":
+if mode == "bad_structured":                 # the result text is a valid answer, structured_output is not
+    out["structured_output"] = "see the result text"
+elif mode not in ("text", "force_text"):
     out["structured_output"] = answer
 print(json.dumps(out))
 '''
@@ -117,7 +121,10 @@ def test_budget_is_a_ceiling_across_runs_and_exhaustion_goes_offline(tmp_path, c
 
 @pytest.mark.parametrize("mode, message", [("junk", "schema"), ("unavailable", "unavailable action"),
                                            ("garbage", "no JSON"), ("error", "reported an error"),
-                                           ("sleep", "TimeoutExpired"), ("other_model", "billed to")])
+                                           ("sleep", "TimeoutExpired"), ("other_model", "billed to"),
+                                           ("force_text", "unexpected field 'force'"),
+                                           ("force", "unexpected field 'force'"),
+                                           ("bad_structured", "schema: not an object")])
 def test_a_failed_call_keeps_the_incumbent_and_is_not_retried(tmp_path, cli, monkeypatch, mode, message):
     monkeypatch.setenv("FAKE_MODE", mode)
     reference, _ = toy.train(*toy.make(tmp_path / "ref"))
@@ -150,9 +157,49 @@ def test_check_accepts_only_what_the_menu_offers():
     menu = dict(set_cohort=["gc:high"], ordinary_weighting=False, set_readout=[2, 3])
     ok = dict(action="set_cohort", target="cohort_01", predicted_sign="lower")
     assert expert.check(ok, menu, {"cohort_01": "gc:high"}) == ("set_cohort", "gc:high")
+    with pytest.raises(ValueError, match="unavailable action"):        # the masked expert never read this name
+        expert.check(dict(ok, target="gc:high"), menu, {"cohort_01": "gc:high"})
     assert expert.check(dict(action="set_readout", target="block_3"), menu, {"block_3": 3}) == ("set_readout", 3)
+    with pytest.raises(ValueError, match="unavailable action"):        # nor did any expert read a bare number
+        expert.check(dict(action="set_readout", target=3), menu, {"block_3": 3})
+    assert expert.check(dict(action="set_readout", target=3), menu, {"block_3": 3, 3: 3}) == ("set_readout", 3)
     assert expert.check(dict(action="keep", target=""), menu) == ("keep", None)
     for bad in (dict(action="ordinary_weighting"), dict(action="set_readout", target="block_4"),
                 dict(action="set_cohort", target="gc:high", predicted_sign="up"), "keep", dict(action="rm")):
         with pytest.raises(ValueError):
             expert.check(bad, menu, {"block_3": 3})
+
+
+GOOD = dict(layer_evidence="block_2", evidence_rows=["r01"], action="set_cohort", target="cohort_01",
+            predicted_sign="lower", hypothesis="h")
+
+
+@pytest.mark.parametrize("answer, message", [
+    (dict(GOOD, force=True), "unexpected field 'force'"),
+    ({k: v for k, v in GOOD.items() if k != "target"}, "missing field 'target'"),
+    (dict(GOOD, hypothesis=None), "'hypothesis' is not a string"),
+    (dict(GOOD, action=["keep"]), "'action' is not a string"),
+    (dict(GOOD, action="dance"), "'action' is 'dance'"),
+    (dict(GOOD, predicted_sign="up"), "'predicted_sign' is 'up'"),
+    (dict(GOOD, evidence_rows=["a", "b", "c"]), "'evidence_rows' has more than 2 items"),
+    (dict(GOOD, evidence_rows="r01"), "'evidence_rows' is not a list of strings"),
+    (dict(GOOD, evidence_rows=[1]), "'evidence_rows' is not a list of strings"),
+    ("keep", "not an object"), ([GOOD], "not an object"), (None, "not an object")])
+def test_validate_enforces_the_schema_sent_to_the_cli(answer, message):
+    assert expert.validate(dict(GOOD)) == GOOD
+    with pytest.raises(ValueError, match="does not follow the schema.*" + message):
+        expert.validate(answer)
+
+
+def test_the_result_text_is_read_only_when_structured_output_is_absent():
+    text = json.dumps(GOOD)
+    assert expert.extract(dict(structured_output=GOOD, result="not read")) == GOOD
+    assert expert.extract(dict(result=text)) == GOOD                    # a valid plain-JSON reply still works
+    for malformed in ("see the result text", None, [GOOD], dict(GOOD, force=True), dict(action="keep")):
+        with pytest.raises(ValueError, match="schema"):                 # a valid result text does not rescue it
+            expert.extract(dict(structured_output=malformed, result=text))
+    for result in ("```json\n" + text + "\n```", "I would keep.", "", None, json.dumps(dict(GOOD, force=True))):
+        with pytest.raises(ValueError, match="schema"):
+            expert.extract(dict(result=result))
+    with pytest.raises(ValueError, match="schema"):
+        expert.extract({})
