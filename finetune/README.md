@@ -5,8 +5,8 @@ Fine-tune a registered foundation model (bio LM) on a curated task via
 - fixed hyperparameters, or 
 - HPO model (hyper-parameter optimized; `hpo.py`), or
 - OPAL (reactive optimizer), or
-- OPAL + bio features (to do), or
-- BiOPAL (to do: agentic wrapper).
+- OPAL + bio features (`--mode biopal --bio-policy fixed`), or
+- BiOPAL (`--mode biopal --bio-policy expert`; see `biopal/README.md`).
 
 
 ## Run 
