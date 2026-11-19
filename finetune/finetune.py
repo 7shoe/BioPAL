@@ -77,6 +77,21 @@ def registries():
     return models, tasks
 
 
+def drop_removed(df, task):
+    """Leave out the rows data/deduplication/duplicate.py lists for this task:
+    train/val rows that duplicate a held-out sequence. Returns (frame, listed rows)."""
+    import pandas as pd
+    listed = pd.read_csv(REPO / "data" / "deduplication" / "removed.tsv", sep="\t",
+                         dtype=str, keep_default_na=False)
+    listed = listed[listed["task"] == task]
+    keys = sorted(listed["split"] + "\t" + listed["series_id"])
+    drop = (df["split"] + "\t" + df["series_id"]).isin(keys)
+    if int(drop.sum()) != len(keys):
+        raise ValueError(f"removed.tsv lists rows that {task} does not have; "
+                         "rerun data/deduplication/duplicate.py")
+    return df[~drop].drop(columns="series_id"), keys
+
+
 def compare_runs(paths):
     left, right = [Path(p) for p in paths]
     a, b = [json.loads((p / "result.json").read_text()) for p in (left, right)]
@@ -294,10 +309,10 @@ def main():
     curated_base, cache_dirs = machine_paths()
     parquet = curated_base / args.task / f"task_{args.objective}.parquet"
     seed_all()
-    df = pd.read_parquet(parquet, columns=["sequence", label, "split"])
+    df = pd.read_parquet(parquet, columns=["series_id", "sequence", label, "split"])
     if df.isna().any().any():
         raise ValueError(f"Nulls in {parquet}")
-    df = df.copy()
+    df, removed = drop_removed(df, args.task)
     df["sequence"] = df["sequence"].str.upper()
     if not df["sequence"].map(bool).all():
         raise ValueError("Empty sequences in the task data")
@@ -519,7 +534,8 @@ def main():
                   hidden_size=hidden_size)
     if roles is not None:
         recipe.update(panel_frac=args.panel_frac, panel=bio_panel.manifest(roles))
-    data_hash = hashlib.sha256(parquet.read_bytes()).hexdigest()
+    # unchanged for tasks with no removed rows, so their earlier runs stay comparable
+    data_hash = hashlib.sha256(parquet.read_bytes() + "\n".join(removed).encode()).hexdigest()
     versions = {}
     for k in ("torch", "transformers", "numpy", "opal-optimizer", "pandas",
               "pyarrow", "scikit-learn", "scipy", "multimolecule"):
@@ -536,7 +552,9 @@ def main():
                     gpu=torch.cuda.get_device_name(0) if device != "cpu" else None,
                     n_params_trainable=sum(v.numel() for v in trainable),
                     full_steps=full_steps,
-                    split_sizes={k: len(v) for k, v in frames.items()})
+                    split_sizes={k: len(v) for k, v in frames.items()},
+                    removed_duplicates={s: sum(r.startswith(s + "\t") for r in removed)
+                                        for s in ("train", "val")})
     (args.out / "config.json").write_text(json.dumps(metadata, indent=2))
 
     wrapped = args.mode != "plain"
