@@ -92,6 +92,19 @@ def drop_removed(df, task):
     return df[~drop].drop(columns="series_id"), keys
 
 
+def shared_inputs(frames):
+    """Model inputs that two splits of a run both hold. `frames` maps each split to the rows the run uses. For
+    every pair of splits with a common sequence: how many distinct ones, how many rows of the pair's second split
+    carry one, and an example."""
+    out = {}
+    for a, b in (("train", "val"), ("train", "test"), ("val", "test")):
+        both = set(frames[a]["sequence"]) & set(frames[b]["sequence"])
+        if both:
+            out[a, b] = dict(inputs=len(both), rows=int(frames[b]["sequence"].isin(both).sum()),
+                             example=min(both))
+    return out
+
+
 def compare_runs(paths):
     left, right = [Path(p) for p in paths]
     a, b = [json.loads((p / "result.json").read_text()) for p in (left, right)]
@@ -222,6 +235,8 @@ def main():
         args.objective = task["tasks"][0]
     if args.objective not in task["tasks"]:
         p.error(f"{args.task} does not register {args.objective}")
+    if args.max_chars < 0:
+        p.error("--max-chars must be nonnegative")
     live = args.mode in ("opal", "biopal")
     if args.panel_frac is None:
         args.panel_frac = .15 if args.mode == "biopal" else 0.
@@ -342,6 +357,14 @@ def main():
                 f = f.head(args.limit)
             f = f.reset_index(drop=True)
         frames[s] = f
+    if args.max_chars:  # cut to one prefix, sequences that differ only further on are the same input
+        shared = shared_inputs(frames)
+        if shared:
+            raise ValueError(
+                f"--max-chars {args.max_chars} gives two splits the same input: " + "; ".join(
+                    f"{a}/{b} share {v['inputs']} ({v['rows']} of {len(frames[b])} {b} rows, "
+                    f"e.g. {v['example'][:40]!r})" for (a, b), v in shared.items())
+                + ". Use a longer --max-chars, or none")
     if classification and any(f[label].nunique() < 2 for f in frames.values()):
         raise ValueError("Each split needs at least two classes for AUROC")
     fit, roles = np.arange(len(frames["train"])), None  # train rows that give gradients
