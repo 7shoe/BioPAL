@@ -9,10 +9,10 @@ Losses are the training loss per row: cross-entropy, or squared error on the sta
 import warnings
 
 import numpy as np
-from sklearn.linear_model import LogisticRegressionCV, RidgeCV
+from sklearn.linear_model import (LogisticRegressionCV,
+                                  RidgeCV)
 
 MIN_ROWS = 32   # a cohort is measured, and can be proposed, only with this many rows in both samples
-
 
 def fit_linear(X, y, classification, num_out):
     """Standardize X and fit a linear model (logistic or ridge); the strength of its L2 penalty is chosen by
@@ -84,6 +84,9 @@ def checkpoint(rows, s, layers=(), current=None):
         for kind, layer, gap in found:
             table.append(dict(id=f"r{len(table) + 1:02d}", measurement=kind, layer=layer, cohort=name,
                               n=int(d.sum()), **gap))
-    return dict(table=table, probes=probes, probe_loss=probe_loss, head_input=feat_f.get(current),
+    return dict(table=table,
+                probes=probes,
+                probe_loss=probe_loss,
+                head_input=feat_f.get(current),
                 panel_loss=float(loss_d.mean()),
                 fit_loss=float(loss_f.mean()))

@@ -1,4 +1,4 @@
-"""BiOPAL data roles and cohorts.
+"""BiOPAL data roles and cohorts
 
 split()        train rows -> fit F (all gradients), diagnostic D (measurements), private A (trial scoring)
 composition()  features of the simple baseline model
@@ -12,6 +12,7 @@ import numpy as np
 AA = "ACDEFGHIKLMNPQRSTVWY"
 HYDROPATHY = [1.8, 2.5, -3.5, -3.5, 2.8, -0.4, -3.2, 4.5, -3.9, 3.8,   # Kyte-Doolittle, in AA order
               1.9, -3.5, -1.6, -3.5, -4.5, -0.8, -0.7, 4.2, -0.9, -1.3]
+
 ABOUT = dict(   # shown to the informed expert only
     gc="fraction of G and C bases",
     kmer_entropy="Shannon entropy of 3-mer usage; low values mean repetitive, low-complexity sequence",

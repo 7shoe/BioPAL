@@ -1,5 +1,7 @@
 """Cumulative Claude spend across runs: one JSON line per charge, appended as soon as the cost is known. The file
-lives outside every run and every training checkpoint, so rewinding a trial branch cannot undo a charge."""
+lives outside every run and every training checkpoint, so rewinding a trial branch cannot undo a charge.
+"""
+
 import json
 import time
 from pathlib import Path

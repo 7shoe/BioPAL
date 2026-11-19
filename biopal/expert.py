@@ -1,14 +1,21 @@
-"""BiOPAL's biological expert: one proposal per gate.
+"""BiOPAL's biological expert proposes one training action per gate
 
-The expert reads a brief (task, cohorts, the gap table of this checkpoint, the configuration, its own earlier
-proposals, the actions on offer) and answers with one action: set_cohort, ordinary_weighting, set_readout or keep.
-The informed expert reads real names and a biological background; the masked expert reads the same brief with
-opaque ids and no background. It never sees sequences, labels, the private set, trial scores or OPAL's programs.
+At each checkpoint, the expert reviews the task, cohort definitions, diagnostic
+gaps, current config and own proposal history. Then choses action.
 
-Claude    one `claude -p` call per proposal: no tools, no saved session, a JSON schema, an explicit model and
-          effort, and the remaining budget as the call's cap. Nothing is retried.
-Scripted  answers from a JSON file, for tests and offline runs.
+Action space: {set_cohort, ordinary_weighting, set_readout, keep}.
+
+The informed expert sees the original names and biological background. The
+masked expert sees the same measurements with opaque IDs and no background.
+Both see their own past trial outcomes. Neither sees raw sequences, labels,
+private evaluation rows, trial scores, or OPAL's update programs.
+
+Claude makes one `claude -p` call per proposal using the configured model,
+effort, JSON schema, and remaining budget. Tools, session persistence, and
+retries are disabled. Scripted reads proposals from a JSON file for tests
+and offline runs.
 """
+
 import json
 import os
 import subprocess
@@ -24,8 +31,11 @@ SYSTEM = (
     "updates are trained twice from this checkpoint, with and without your change, and compared on private "
     "held-out rows. Propose a change only when the measurements give a specific reason to expect that it lowers "
     "the private loss. Answer with the JSON object only.")
+
 ACTIONS = ["set_cohort", "ordinary_weighting", "set_readout", "keep"]
+
 SIGNS = ["lower", "higher", "no_change"]
+
 SCHEMA = dict(
     type="object", additionalProperties=False,
     required=["layer_evidence", "evidence_rows", "action", "target", "predicted_sign", "hypothesis"],

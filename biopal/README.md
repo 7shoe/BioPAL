@@ -115,3 +115,38 @@ conda run -n biopal-v2 python -m pytest tests/biopal -q      # CPU, about 40 s, 
   to 60% of all cohort options passed at any one horizon, the sign of the difference often flipped between
   horizons, and the differences at two horizons were uncorrelated. A pass in a single trial is therefore weak
   evidence on these two tasks; see the audit before trusting an adoption.
+
+
+## First Test Run: BiOPAL, OPAL, Fine-Tuning
+
+```bash
+cd /home/csiebenschuh/Projects/biopal/finetune && conda activate biopal-v2
+
+MODEL=claude-opus-5-5
+EFFORT=medium
+OPAL_USD=3
+EXPERT_USD=1
+RUN=runs/live_opus_medium
+
+CUDA_VISIBLE_DEVICES=0 OPAL_MODEL="$MODEL" OPAL_EFFORT="$EFFORT" \
+  python finetune.py \
+    --model esm2_t12_35m \
+    --task proteingym_gfp_fluorescence \
+    --limit 8000 \
+    --epochs 1 \
+    --det strict \
+    --mode biopal \
+    --bio-policy expert \
+    --outer both \
+    --expert-shadow masked \
+    --decisions 3 \
+    --outer-decisions 2 \
+    --outer-steps 32 \
+    --expert-model "$MODEL" \
+    --expert-effort "$EFFORT" \
+    --expert-timeout 300 \
+    --budget "$OPAL_USD" \
+    --expert-budget "$EXPERT_USD" \
+    --ledger "${RUN}.ledger.jsonl" \
+    --out "$RUN"
+```

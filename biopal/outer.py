@@ -222,7 +222,9 @@ class Outer:
     def restore(self, snap):
         """Back to the snapshot. Returns whether OPAL's program changed since it; agent calls and cost that the
         rewind would otherwise forget are added to the run's counters first."""
+        
         o, worker = self.t.optimizer, getattr(self.t.optimizer, "worker", None)
+        
         if worker:
             self.trial_calls += worker.k - snap["calls"]
             self.rewound_cost += worker.cost - snap["cost"]
@@ -231,21 +233,29 @@ class Outer:
         o.load_state_dict(copy.deepcopy(snap["opt"]))   # OPAL keeps what it is given: hand it a copy
         o._resume_note = ""                             # private in OPAL 0.3.10: its agent is not told of the rewind
         self.t.scheduler.load_state_dict(snap["sched"])
+        
         torch.set_rng_state(snap["rng"])
+        
         if snap["cuda"] is not None:
             torch.cuda.set_rng_state_all(snap["cuda"])
         self.set_cohort(snap["cohort"])
+        
         return changed
 
     def branch(self, snap, action, m, batches, horizons):
         """From the snapshot: apply the action, run the updates, score A at each horizon."""
+        
         self.restore(snap)
         self.apply(action, m)
+        
         out = dict(losses=[], A={})
+        
         if action[0] in ("set_readout", "refit_head"):   # the installed head must give the probe's loss on every row
             out["install_error"] = float(np.abs(self.t.rows(self.s.D)[0] - m["probe_loss"][action[1]]).max())
+        
         for i, indices in enumerate(batches[:max(horizons)], 1):
             out["losses"].append(self.t.update(indices, self.weights(indices)).item())
+            
             if i in horizons:
                 out["A"][i] = self.t.rows(self.s.A)[0]
                 if not np.isfinite(out["A"][i]).all():
@@ -255,17 +265,22 @@ class Outer:
     def propose(self, role, gate, update, m, menu):
         """One proposal; a failed call or an unusable answer keeps the incumbent and is not retried. Each expert
         gets the same checkpoint and its own earlier proposals, in the names it reads."""
+        
         names, t = self.names[role], self.t
+        
         text = expert.brief(dict(
             task=t.task, modality=t.modality, model=t.model, blocks=t.blocks or "an unknown number of",
             objective="classification" if t.classification else "regression", defs=self.defs, update=update,
             total=t.total, config=self.config(), table=m["table"], menu=menu, k=self.args.outer_steps,
             alpha=self.args.outer_alpha, history=[h for h in self.history if h["role"] == role]),
             names, masked=role == "masked")
+        
         (t.out / "expert").mkdir(exist_ok=True)
         (t.out / "expert" / f"gate{gate + 1}_{role}_brief.txt").write_text(text)
+        
         shown = {names[c]: c for c in menu.get("set_cohort", [])}
         shown.update({f"block_{k}": k for k in menu.get("set_readout", [])})
+        
         try:
             answer = self.expert.propose(role, gate, text)
             action, target = expert.check(answer, menu, shown)
@@ -276,8 +291,10 @@ class Outer:
     def gate(self, update, batches):
         """Called after `update` when it is a gate; `batches` are the row indices of the updates that follow in
         this epoch. Leaves the trainer at the same update, under the configuration that won."""
+        
         a, o, i = self.args, self.t.optimizer, self.gates.index(update)
         self.idle_check(f"gate {i}")
+        
         m = measure.checkpoint(self.t.rows, self.s, self.layers, self.block())
         menu = self.menu(m)
         self.write(event="table", gate=i, update=update, config=self.config(), table=m["table"],
@@ -285,8 +302,10 @@ class Outer:
         proposals = {role: self.propose(role, i, update, m, menu) for role in self.roles}
         self.write(event="proposals", gate=i, update=update, **proposals)
         self.log.flush()
+        
         os.fsync(self.log.fileno())                     # every proposal is on disk before A is read
         by = {}                                         # each distinct change gets one branch
+        
         for role, p in proposals.items():
             if p["action"] != "keep":
                 by.setdefault((p["action"], p["target"]), []).append(role)
@@ -298,6 +317,7 @@ class Outer:
                 by.setdefault(action, []).append("audit")
         horizons = sorted(set(self.audit or []) | {a.outer_steps})
         results, adopt, changed = {}, None, False
+       
         if by:
             snap, worker = self.snapshot(), getattr(o, "worker", None)
             cap = getattr(o, "max_decisions", None)
@@ -343,6 +363,7 @@ class Outer:
                                       loss_A={h: float(incumbent["A"][h].mean()) for h in horizons}),
                        branches=[dict(r, horizons={str(h): v for h, v in r.get("horizons", {}).items()})
                                  for r in results.values()])
+        
         for role, p in proposals.items():               # what each expert is told later about its own proposal
             r = results.get((p["action"], p["target"]), {})
             outcome = ("kept" if p["action"] == "keep" and p["ok"] else "failed" if not p["ok"] or "failed" in r
@@ -367,15 +388,18 @@ class Outer:
     def block(self):
         """Index of the block that feeds the task head (the last one unless a readout switch was adopted)."""
         route = int(self.t.net["readout"].layer) if "readout" in self.t.net else -1
+        
         return route if route >= 0 else self.t.blocks
 
     def weights(self, indices):
         """Per-row loss weights of the active configuration for one batch; None means the ordinary mean."""
+        
         return None if self.W is None else self.W[torch.as_tensor(np.asarray(indices), device=self.W.device)]
 
     def before(self, update):
         """Called before every update. When an OPAL decision is due at this update, show OPAL the loss on D and
         the readout block (and, with --bio-policy fixed, the two whole-panel gaps)."""
+        
         if update not in self.decisions:
             return
         loss_d = self.t.rows(self.s.D)[0]
@@ -396,6 +420,7 @@ class Outer:
         if cost:
             ledger.charge(self.args.ledger, "opal", cost, run=str(self.t.out))
         self.log.close()
+        
         return dict(opal_decisions=self.decisions, opal_cost_usd=cost, gates=self.gates, adopted=self.adopted,
                     final_config=self.config(), opal_calls_in_trials=self.trial_calls,
                     expert_calls=getattr(self.expert, "calls", 0), expert_cost_usd=getattr(self.expert, "cost", 0.),

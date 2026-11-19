@@ -1,4 +1,5 @@
-"""BiOPAL: a biological expert as the outer level of bilevel fine-tuning; OPAL stays the inner level.
+"""BiOPAL: Bilevel OPtimizer with an Agent in the Loop 
+This instance: a biological expert as the outer level of bilevel fine-tuning; OPAL stays the inner level.
 
 Everything runs through finetune/finetune.py (--mode biopal, or --mode keep for the offline twin):
   panel.py    data roles (fit F, diagnostic D, private A), cohorts, names shown to the expert
