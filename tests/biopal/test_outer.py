@@ -81,9 +81,28 @@ def test_gate_placement_respects_epochs_decisions_and_the_trial_horizon():
     assert outer.place([1000], [], 64, 1066, 2132, 50) == ([1000], [])
     assert outer.place([300], [350], 64, 1066, 2132, 50) == ([350], [])   # nor hold an OPAL decision
     assert outer.place([300], [350, 450], 128, 1066, 2132, 50) == ([450], [])
-    assert outer.place([300, 300], [], 64, 1066, 2132, 50) == ([300, 350], [])
+    assert outer.place([300, 300], [], 64, 1066, 2132, 50) == ([300, 400], [])
     assert outer.place([2100], [], 64, 1066, 2132, 50) == ([], [2100])    # no room left: dropped, and reported
     assert outer.place([50], [], 8, 50, 200, 50) == ([], [50])            # never at an epoch's last update
+
+
+def test_next_gate_can_open_after_the_last_replay_update():
+    assert outer.place([30, 40], [], 20, 100, 100, 10) == ([30, 50], [])
+
+
+def test_replay_spacing_uses_the_placed_gate_and_reports_unplaceable_requests():
+    # The OPAL decision moves the first gate to 40. The second can open at 60.
+    assert outer.place([30, 40, 50], [40], 20, 100, 100, 10) == ([40, 60], [50])
+
+
+@pytest.mark.parametrize(("per_epoch", "total", "expected"), [
+    (100, 100, ([], [80])),     # the final update coincides with the epoch boundary
+    (120, 100, ([], [80])),     # the run stops mid-epoch
+    (120, 101, ([80], [])),     # one committed update remains after replay
+    (100, 200, ([80], [])),     # replay may end on an earlier epoch boundary
+])
+def test_trial_must_finish_before_the_final_update(per_epoch, total, expected):
+    assert outer.place([80], [], 20, per_epoch, total, 10) == expected
 
 
 def test_adoption_rule_win_loss_tie_and_non_finite():

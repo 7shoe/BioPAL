@@ -49,19 +49,19 @@ def spaced(total, n, every, lo=.15, hi=.85):
 
 
 def place(gates, decisions, horizon, per_epoch, total, every):
-    """Move each gate up to the first check whose trial window, the `horizon` updates after it, lies inside one
-    epoch and holds no scheduled OPAL decision. A decision at the gate's own update is fine: OPAL decides first.
-    -> (placed, dropped)"""
+    """Return placed and dropped gates. Each gate opens after the preceding replay finishes. Its next
+    `horizon` updates must fit in the epoch and contain no OPAL decision. A decision at the gate runs first.
+    The final training update must run outside a trial because OPAL closes there."""
     placed, dropped = [], []
     for gate in gates:
-        u = gate
-        while u + horizon <= total:
+        for u in range(gate, total - horizon, every):
+            if placed and u < placed[-1] + horizon:
+                continue
             epoch_end = math.ceil(u / per_epoch) * per_epoch
-            if u % per_epoch and u + horizon <= epoch_end and u not in placed \
+            if u % per_epoch and u + horizon <= epoch_end \
                     and not any(u < d <= u + horizon for d in decisions):
                 placed.append(u)
                 break
-            u += every
         else:
             dropped.append(gate)
     return placed, dropped
