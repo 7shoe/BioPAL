@@ -2,17 +2,27 @@
 
 OPAL owns the update rule and sees the plain training loss, the loss on the diagnostic set D and the block that
 feeds the task head. This module shows OPAL those values before each of its decisions.
+
+At a gate the outer level measures the checkpoint, asks the expert for one change to the training configuration
+(here: which cohort's rows weigh more in the loss), and tests it: from one snapshot, the next K updates are run
+with the change and without it, through the trainer's own update function, and both end states are scored per
+row on the private set A. The change is adopted only if the mean loss difference is below minus one standard
+error. Training then continues from the snapshot under the winning configuration, so the trial itself leaves no
+trace in the model, in OPAL's state, or in what OPAL's agent is told.
 """
+import copy
 import json
 import math
+import os
 import types
 
 import numpy as np
 import torch
 
-from . import ledger, measure, panel
+from . import expert, ledger, measure, panel
 
 SAMPLE = 2048   # fixed diagnostic and fit rows measured at every checkpoint
+KEEP = ("keep", None)
 
 
 def spaced(total, n, every, lo=.15, hi=.85):
@@ -21,6 +31,32 @@ def spaced(total, n, every, lo=.15, hi=.85):
     at = np.linspace(lo * total, hi * total, n) if n > 1 else [total / 2]
     last = (total - every) // every * every
     return sorted({u for u in (min(math.ceil(a / every) * every, last) for a in at) if u >= every})
+
+
+def place(gates, decisions, horizon, per_epoch, total, every):
+    """Move each gate up to the first check whose trial window, the `horizon` updates after it, lies inside one
+    epoch and holds no scheduled OPAL decision. A decision at the gate's own update is fine: OPAL decides first.
+    -> (placed, dropped)"""
+    placed, dropped = [], []
+    for gate in gates:
+        u = gate
+        while u + horizon <= total:
+            epoch_end = math.ceil(u / per_epoch) * per_epoch
+            if u % per_epoch and u + horizon <= epoch_end and u not in placed \
+                    and not any(u < d <= u + horizon for d in decisions):
+                placed.append(u)
+                break
+            u += every
+        else:
+            dropped.append(gate)
+    return placed, dropped
+
+
+def verdict(candidate, incumbent):
+    """Paired comparison on the rows of A: mean loss difference, its standard error, and the adoption rule."""
+    d = candidate - incumbent
+    mean, se = float(d.mean()), float(d.std(ddof=1) / math.sqrt(len(d)))
+    return dict(mean_d=mean, se=se, passes=bool(np.isfinite(d).all() and mean < -se))
 
 
 @torch.no_grad()
@@ -59,13 +95,180 @@ class Outer:
         simple = measure.fit_linear(comp[t.roles["F"]], t.y[t.roles["F"]], t.classification, t.num_out)
         self.s.base = measure.linear_loss(simple, comp[self.s.D], t.y[self.s.D], t.classification)
         self.decisions = [int(u) for u in getattr(t.optimizer, "schedule", [])]   # as OPAL resolved them
-        self.gates = []
+        self.cohort, self.W = None, None                # the active configuration: which cohort weighs more
+        self.history, self.adopted, self.trial_calls, self.rewound_cost = [], [], 0, 0.
+        self.audit = sorted(args.outer_audit) if args.outer_audit is not None else None
+        self.horizon = max([args.outer_steps] + (self.audit or []))
+        self.roles = [] if args.bio_policy != "expert" else ["informed"] + ["masked"] * (args.expert_shadow == "masked")
+        self.expert = expert.Scripted(args.expert_script) if self.roles else None
+        self.gates, dropped = [], []
+        if self.roles or self.audit:
+            self.gates, dropped = place(spaced(t.total, args.outer_decisions, args.check_every), self.decisions,
+                                        self.horizon, t.per_epoch, t.total, args.check_every)
         self.log = (t.out / "outer.jsonl").open("w", buffering=1)
-        self.write(event="schedule", opal_decisions=self.decisions, gates=self.gates)
-        print(f"[biopal] OPAL decisions at updates {self.decisions}", flush=True)
+        self.write(event="schedule", opal_decisions=self.decisions, gates=self.gates, dropped_gates=dropped,
+                   trial_updates=self.horizon)
+        print(f"[biopal] OPAL decisions at updates {self.decisions}; gates after updates {self.gates}"
+              + (f" (no room for a {self.horizon}-update trial at {dropped})" if dropped else ""), flush=True)
 
     def write(self, **record):
         self.log.write(json.dumps(record) + "\n")
+
+    # ------------------------------------------------------------------ the training configuration
+    def config(self):
+        return dict(cohort=self.cohort)
+
+    def set_cohort(self, cohort):
+        """Rows of the cohort weigh (1 - alpha) + alpha / share, all others 1 - alpha: the mean weight over the
+        fit set stays 1. None restores the ordinary mean."""
+        self.cohort, self.W = cohort, None
+        if cohort is not None:
+            mask, alpha = self.s.cohorts[cohort], self.args.outer_alpha
+            w = (1 - alpha) + alpha * mask / mask[self.t.roles["F"]].mean()
+            self.W = torch.tensor(w, dtype=torch.float32, device=self.t.device)
+
+    def apply(self, action, m):
+        kind, target = action
+        if kind in ("set_cohort", "ordinary_weighting"):
+            self.set_cohort(target)
+
+    def menu(self, m):
+        """The changes on offer at this gate. A cohort can be proposed if it was measured (enough rows)."""
+        measured = {r["cohort"] for r in m["table"]}
+        out = {}
+        if self.args.outer in ("cohort", "both"):
+            out["set_cohort"] = [c for c in self.s.cohorts if c in measured and c != self.cohort]
+            out["ordinary_weighting"] = self.cohort is not None
+        return out
+
+    # ------------------------------------------------------------------ snapshot, branch, gate
+    def snapshot(self):
+        o, worker = self.t.optimizer, getattr(self.t.optimizer, "worker", None)
+        return dict(net=copy.deepcopy(self.t.net.state_dict()), opt=copy.deepcopy(o.state_dict()),
+                    sched=copy.deepcopy(self.t.scheduler.state_dict()), rng=torch.get_rng_state(),
+                    cuda=torch.cuda.get_rng_state_all() if torch.cuda.is_available() else None,
+                    cohort=self.cohort, program=getattr(o, "digests", None),
+                    calls=worker.k if worker else 0, cost=worker.cost if worker else 0.)
+
+    def restore(self, snap):
+        """Back to the snapshot. Returns whether OPAL's program changed since it; agent calls and cost that the
+        rewind would otherwise forget are added to the run's counters first."""
+        o, worker = self.t.optimizer, getattr(self.t.optimizer, "worker", None)
+        if worker:
+            self.trial_calls += worker.k - snap["calls"]
+            self.rewound_cost += worker.cost - snap["cost"]
+        changed = getattr(o, "digests", None) != snap["program"]
+        self.t.net.load_state_dict(snap["net"])
+        o.load_state_dict(copy.deepcopy(snap["opt"]))   # OPAL keeps what it is given: hand it a copy
+        o._resume_note = ""                             # private in OPAL 0.3.10: its agent is not told of the rewind
+        self.t.scheduler.load_state_dict(snap["sched"])
+        torch.set_rng_state(snap["rng"])
+        if snap["cuda"] is not None:
+            torch.cuda.set_rng_state_all(snap["cuda"])
+        self.set_cohort(snap["cohort"])
+        return changed
+
+    def branch(self, snap, action, m, batches, horizons):
+        """From the snapshot: apply the action, run the updates, score A at each horizon."""
+        self.restore(snap)
+        self.apply(action, m)
+        out = dict(losses=[], A={})
+        for i, indices in enumerate(batches[:max(horizons)], 1):
+            out["losses"].append(self.t.update(indices, self.weights(indices)).item())
+            if i in horizons:
+                out["A"][i] = self.t.rows(self.s.A)[0]
+                if not np.isfinite(out["A"][i]).all():
+                    raise RuntimeError("Non-finite loss on the private set")
+        return out
+
+    def propose(self, role, gate, m, menu):
+        """One proposal; a failed call or an unusable answer keeps the incumbent and is not retried."""
+        try:
+            answer = self.expert.propose(role, gate)
+            action, target = expert.check(answer, menu)
+            return dict(answer, action=action, target=target, ok=True)
+        except Exception as e:
+            return dict(action="keep", target=None, ok=False, error=f"{type(e).__name__}: {e}")
+
+    def gate(self, update, batches):
+        """Called after `update` when it is a gate; `batches` are the row indices of the updates that follow in
+        this epoch. Leaves the trainer at the same update, under the configuration that won."""
+        a, o, i = self.args, self.t.optimizer, self.gates.index(update)
+        m = measure.checkpoint(self.t.rows, self.s)
+        menu = self.menu(m)
+        self.write(event="table", gate=i, update=update, config=self.config(), table=m["table"],
+                   panel_loss=m["panel_loss"], fit_loss=m["fit_loss"], menu=menu)
+        proposals = {role: self.propose(role, i, m, menu) for role in self.roles}
+        self.write(event="proposals", gate=i, update=update, **proposals)
+        self.log.flush()
+        os.fsync(self.log.fileno())                     # every proposal is on disk before A is read
+        by = {}                                         # each distinct change gets one branch
+        for role, p in proposals.items():
+            if p["action"] != "keep":
+                by.setdefault((p["action"], p["target"]), []).append(role)
+        if self.audit:
+            for action in [("set_cohort", c) for c in menu.get("set_cohort", [])] + [("incumbent_repeat", None)]:
+                by.setdefault(action, []).append("audit")
+        horizons = sorted(set(self.audit or []) | {a.outer_steps})
+        results, adopt, changed = {}, None, False
+        if by:
+            snap, worker = self.snapshot(), getattr(o, "worker", None)
+            cap = getattr(o, "max_decisions", None)
+            if worker:
+                o.max_decisions = worker.k              # no agent call can be asked inside a branch
+            try:
+                scored = {}
+                for action in by:
+                    try:
+                        scored[action] = self.branch(snap, action, m, batches, horizons)
+                        if getattr(o, "digests", None) != snap["program"]:
+                            raise RuntimeError("OPAL changed its program inside the branch")
+                    except RuntimeError as e:           # a failed candidate falls back to the incumbent
+                        scored[action] = dict(failed=str(e))
+                try:
+                    incumbent = self.branch(snap, KEEP, m, batches, horizons)   # last, so a failure ends the run
+                except RuntimeError as e:
+                    self.write(event="incumbent_failed", gate=i, update=update, error=str(e))
+                    raise RuntimeError(f"BiOPAL gate {i}: the incumbent branch failed ({e}); run failed") from e
+            finally:
+                changed = self.restore(snap)            # also when the run fails: counters and ledger stay right
+                if worker:
+                    o.max_decisions = cap
+            for action, roles in by.items():
+                r = results[action] = dict(action=action[0], target=action[1], by=roles)
+                if "failed" in scored[action]:
+                    r["failed"] = scored[action]["failed"]
+                else:
+                    r.update(losses=scored[action]["losses"],
+                             horizons={h: verdict(scored[action]["A"][h], incumbent["A"][h]) for h in horizons})
+            informed = proposals.get("informed", {})
+            won = results.get((informed.get("action"), informed.get("target")), {})
+            if informed.get("action", "keep") != "keep" and not changed and (
+                    informed.get("force") or won.get("horizons", {}).get(a.outer_steps, {}).get("passes")):
+                adopt = (informed["action"], informed["target"])
+                self.apply(adopt, m)
+                self.adopted.append(dict(gate=i, update=update, action=adopt[0], target=adopt[1]))
+            self.write(event="trial", gate=i, update=update, trial_updates=a.outer_steps,
+                       incumbent=dict(losses=incumbent["losses"],
+                                      loss_A={h: float(incumbent["A"][h].mean()) for h in horizons}),
+                       branches=[dict(r, horizons={str(h): v for h, v in r.get("horizons", {}).items()})
+                                 for r in results.values()])
+        for role, p in proposals.items():               # what each expert is told later about its own proposal
+            r = results.get((p["action"], p["target"]), {})
+            outcome = ("kept" if p["action"] == "keep" and p["ok"] else "failed" if not p["ok"] or "failed" in r
+                       else "passed" if r["horizons"][a.outer_steps]["passes"] else "did not pass")
+            p.update(outcome=outcome, trial=r.get("horizons", {}).get(a.outer_steps))
+            self.history.append(dict(gate=i, update=update, role=role, action=p["action"], target=p["target"],
+                                     outcome=outcome, config_after=self.config()))
+        self.write(event="decision", gate=i, update=update, adopted=adopt is not None,
+                   action=adopt[0] if adopt else "keep", target=adopt[1] if adopt else None,
+                   forced=bool(adopt and proposals["informed"].get("force")), config_after=self.config(),
+                   proposals={role: {k: p.get(k) for k in ("action", "target", "ok", "error", "outcome", "trial")}
+                              for role, p in proposals.items()},
+                   opal_program_changed=changed, opal_calls_in_trial=self.trial_calls,
+                   loss_aware_updater=bool(getattr(o, "_step_ctx", False)), next_update=update + 1)
+        print(f"[biopal] gate {i} after update {update}: " + (f"adopted {adopt[0]} {adopt[1]}" if adopt else "kept")
+              + f"; configuration {self.config()}", flush=True)
 
     def block(self):
         """Index of the block that feeds the task head (the last one unless a readout switch was adopted)."""
@@ -73,7 +276,7 @@ class Outer:
 
     def weights(self, indices):
         """Per-row loss weights of the active configuration for one batch; None means the ordinary mean."""
-        return None
+        return None if self.W is None else self.W[torch.as_tensor(np.asarray(indices), device=self.W.device)]
 
     def before(self, update):
         """Called before every update. When an OPAL decision is due at this update, show OPAL the loss on D and
@@ -93,8 +296,9 @@ class Outer:
     def close(self):
         """After OPAL closed: charge its spend to the ledger; returns the summary for result.json."""
         worker = getattr(self.t.optimizer, "worker", None)
-        cost = float(worker.cost) if worker is not None else 0.
+        cost = (float(worker.cost) if worker is not None else 0.) + self.rewound_cost
         if cost:
             ledger.charge(self.args.ledger, "opal", cost, run=str(self.t.out))
         self.log.close()
-        return dict(opal_decisions=self.decisions, opal_cost_usd=cost)
+        return dict(opal_decisions=self.decisions, opal_cost_usd=cost, gates=self.gates, adopted=self.adopted,
+                    final_config=self.config(), opal_calls_in_trials=self.trial_calls)

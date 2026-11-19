@@ -140,9 +140,26 @@ def main():
     b.add_argument("--panel-frac", type=float,
                    help="hold this fraction of train out of the gradient, half as diagnostic "
                         "set D and half as private set A (default 0; 0.15 with --mode biopal)")
-    b.add_argument("--bio-policy", choices=["off", "fixed"], default="off",
-                   help="what OPAL sees besides the loss on D: nothing more (off), or the "
-                        "whole-panel baseline and generalization gaps (fixed)")
+    b.add_argument("--bio-policy", choices=["off", "fixed", "expert"], default="off",
+                   help="off: OPAL sees the loss on D. fixed: also the whole-panel baseline and "
+                        "generalization gaps. expert: OPAL sees what off shows, and an expert "
+                        "proposes changes to the training configuration at gates")
+    b.add_argument("--outer", choices=["off", "cohort"], default="cohort",
+                   help="what the expert may change: the cohort whose rows weigh more")
+    b.add_argument("--outer-decisions", type=int, default=5, help="gates per run")
+    b.add_argument("--outer-steps", type=int, default=64,
+                   help="updates of the matched trial at a gate")
+    b.add_argument("--outer-alpha", type=float, default=.2,
+                   help="share of the loss weight moved to the chosen cohort")
+    b.add_argument("--outer-audit", type=int, nargs="*", metavar="UPDATES",
+                   help="at every gate also try each option on offer and repeat the incumbent, "
+                        "scored after these many updates (default 16 32 64 128); no extra "
+                        "Claude calls")
+    b.add_argument("--expert-shadow", choices=["none", "masked"], default="none",
+                   help="masked: a second expert without biological names proposes from the "
+                        "same checkpoint; its proposal is scored, never adopted")
+    b.add_argument("--expert-script", type=Path,
+                   help="JSON file of scripted proposals instead of Claude calls")
     b.add_argument("--check-every", type=int, default=50,
                    help="OPAL's check interval in updates; BiOPAL schedules fall on checks")
     b.add_argument("--ledger", type=Path,
@@ -188,8 +205,15 @@ def main():
     if args.panel_frac is None:
         args.panel_frac = .15 if args.mode == "biopal" else 0.
     use_bio = args.mode in ("keep", "biopal") and args.panel_frac > 0
-    if (args.mode == "biopal" or args.bio_policy != "off") and not use_bio:
+    if args.outer_audit == []:
+        args.outer_audit = [16, 32, 64, 128]
+    if (args.mode == "biopal" or args.bio_policy != "off" or args.outer_audit) and not use_bio:
         p.error("BiOPAL needs --panel-frac > 0 and --mode biopal (or keep, its offline twin)")
+    if args.bio_policy == "expert" and (args.outer == "off" or not args.expert_script):
+        p.error("--bio-policy expert needs --outer and --expert-script")
+    if args.outer_steps < 1 or args.outer_decisions < 1 or not 0 < args.outer_alpha < 1 \
+            or min(args.outer_audit or [1]) < 1:
+        p.error("Invalid --outer-steps, --outer-decisions, --outer-alpha or --outer-audit")
     if args.epochs < 1 or args.batch_size < 1 or args.max_steps < 0 \
             or args.limit < 0 or args.lr <= 0 or args.decisions < 1 \
             or not 0 <= args.panel_frac < 1:
@@ -598,6 +622,9 @@ def main():
                     if step == 1 or step % 25 == 0 or step == total_steps:
                         print(f"epoch={epoch} step={step}/{total_steps} "
                               f"loss={loss.item():.6f}", flush=True)
+                    if bio and step in bio.gates:  # trial on the next updates, then go on
+                        bio.gate(step, [order[s:s + args.batch_size] for s in range(
+                            start + args.batch_size, len(order), args.batch_size)])
                     if step >= total_steps:
                         break
                 if not args.max_steps:

@@ -12,7 +12,8 @@ import torch.nn.functional as F
 
 from biopal import outer, panel
 
-FLAGS = dict(seed=0, bio_policy="off", check_every=10, ledger=None)
+FLAGS = dict(seed=0, bio_policy="off", check_every=10, ledger=None, outer="cohort", outer_decisions=2, outer_steps=8,
+             outer_alpha=.2, outer_audit=None, expert_shadow="none", expert_script=None)
 
 
 class Backbone(torch.nn.Module):
@@ -105,8 +106,9 @@ def make(tmp_path, backend="keep", classification=True, epochs=3, batch_size=16,
     return args, t, (outer.Outer(args, t) if wrapped else None)
 
 
-def train(args, t, bio):
-    """The training loop of finetune.py, without validation. -> the loss of every committed update."""
+def train(args, t, bio, switch=None):
+    """The training loop of finetune.py, without validation. -> the loss of every committed update.
+    switch: {update: cohort} sets the cohort after that update without a gate (the reference for an adoption)."""
     order_rng, losses, step = np.random.default_rng(args.seed), [], 0
     t.net.train()
     for _ in range(t.epochs):
@@ -117,6 +119,10 @@ def train(args, t, bio):
                 bio.before(step + 1)
             losses.append(t.update(indices, bio.weights(indices) if bio else None).item())
             step += 1
+            if switch and step in switch:
+                bio.set_cohort(switch[step])
+            if bio and step in bio.gates:
+                bio.gate(step, [order[s:s + t.batch_size] for s in range(start + t.batch_size, len(order), t.batch_size)])
     if t.wrapped:
         t.optimizer.close()
     return losses, (bio.close() if bio else None)
