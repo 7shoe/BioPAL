@@ -74,6 +74,12 @@ def verdict(candidate, incumbent):
     return dict(mean_d=mean, se=se, passes=bool(np.isfinite(d).all() and mean < -se))
 
 
+def is_scored(trial):
+    """A trial counts as scored when it has a verdict whose mean difference and standard error are both finite
+    (one private row, for example, leaves the standard error undefined)."""
+    return trial is not None and math.isfinite(trial["mean_d"]) and math.isfinite(trial["se"])
+
+
 @torch.no_grad()
 def blocks(base, x, default):
     """Number of blocks if the backbone returns every layer's output in the shape of its default output and the
@@ -278,13 +284,19 @@ class Outer:
         (t.out / "expert").mkdir(exist_ok=True)
         (t.out / "expert" / f"gate{gate + 1}_{role}_brief.txt").write_text(text)
         
+        scripted = getattr(self.expert, "scripted", False)
         shown = {names[c]: c for c in menu.get("set_cohort", [])}
         shown.update({f"block_{k}": k for k in menu.get("set_readout", [])})
-        
+        if scripted:                                    # offline plans name real cohorts and integer blocks
+            shown.update({target: target for target in list(shown.values())})
+
         try:
             answer = self.expert.propose(role, gate, text)
             action, target = expert.check(answer, menu, shown)
-            return dict(answer, action=action, target=target, ok=True)
+            # the record holds the answer's schema fields and the trainer's own; nothing else a reply carries
+            said = {k: answer[k] for k in expert.SCHEMA["properties"] if k in answer}
+            force = dict(force=True) if scripted and answer.get("force") is True else {}
+            return dict(said, action=action, target=target, ok=True, **force)
         except Exception as e:
             return dict(action="keep", target=None, ok=False, error=f"{type(e).__name__}: {e}")
 
@@ -316,8 +328,8 @@ class Outer:
             for action in options + [("incumbent_repeat", None)]:
                 by.setdefault(action, []).append("audit")
         horizons = sorted(set(self.audit or []) | {a.outer_steps})
-        results, adopt, changed = {}, None, False
-       
+        results, adopt, changed, force = {}, None, False, False
+
         if by:
             snap, worker = self.snapshot(), getattr(o, "worker", None)
             cap = getattr(o, "max_decisions", None)
@@ -351,8 +363,10 @@ class Outer:
                              horizons={h: verdict(scored[action]["A"][h], incumbent["A"][h]) for h in horizons})
             informed = proposals.get("informed", {})
             won = results.get((informed.get("action"), informed.get("target")), {})
-            if informed.get("action", "keep") != "keep" and not changed and (
-                    informed.get("force") or won.get("horizons", {}).get(a.outer_steps, {}).get("passes")):
+            trial = won.get("horizons", {}).get(a.outer_steps)
+            force = informed.get("force") is True       # propose() sets it, and only for a scripted expert
+            if informed.get("action", "keep") != "keep" and not changed and is_scored(trial) and (
+                    force or trial["passes"]):
                 adopt = (informed["action"], informed["target"])
                 self.apply(adopt, m)
                 if adopt[0] == "set_readout":
@@ -376,7 +390,7 @@ class Outer:
                                      outcome=outcome, config_after=self.config()))
         self.write(event="decision", gate=i, update=update, adopted=adopt is not None,
                    action=adopt[0] if adopt else "keep", target=adopt[1] if adopt else None,
-                   forced=bool(adopt and proposals["informed"].get("force")), config_after=self.config(),
+                   forced=bool(adopt and force), config_after=self.config(),
                    proposals={role: {k: p.get(k) for k in ("action", "target", "ok", "error", "outcome", "trial",
                                                            "predicted_sign", "sign_correct")}
                               for role, p in proposals.items()},

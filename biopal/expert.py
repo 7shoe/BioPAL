@@ -115,14 +115,57 @@ def brief(c, names, masked):
     return "\n".join(lines)
 
 
+def validate(answer):
+    """The answer if it follows SCHEMA, the contract sent to the CLI: every field, no other field, the declared
+    types and allowed values. ValueError naming what is wrong otherwise."""
+    if not isinstance(answer, dict):
+        raise ValueError(f"answer does not follow the schema: not an object: {str(answer)[:200]}")
+    fields = SCHEMA["properties"]
+    wrong = [f"missing field {k!r}" for k in SCHEMA["required"] if k not in answer]
+    wrong += [f"unexpected field {k!r}" for k in answer if k not in fields]
+    for k, spec in fields.items():
+        if k not in answer:
+            continue
+        v = answer[k]
+        if spec["type"] == "string":
+            if not isinstance(v, str):
+                wrong.append(f"{k!r} is not a string")
+            elif "enum" in spec and v not in spec["enum"]:
+                wrong.append(f"{k!r} is {v[:40]!r}, not one of {spec['enum']}")
+        elif spec["type"] == "array" and spec["items"] == dict(type="string"):
+            if not isinstance(v, list) or not all(isinstance(x, str) for x in v):
+                wrong.append(f"{k!r} is not a list of strings")
+            elif len(v) > spec.get("maxItems", len(v)):
+                wrong.append(f"{k!r} has more than {spec['maxItems']} items")
+        else:
+            raise TypeError(f"validate() cannot check field {k!r} of SCHEMA")
+    if wrong:
+        raise ValueError("answer does not follow the schema: " + "; ".join(wrong))
+    return answer
+
+
+def extract(reply):
+    """The expert's answer from the CLI's JSON reply. `structured_output` is used whenever the reply has that key;
+    only a reply without it is read from the result text, which must then be plain JSON. Both must follow SCHEMA."""
+    if "structured_output" in reply:
+        return validate(reply["structured_output"])
+    try:
+        answer = json.loads(reply.get("result"))
+    except (TypeError, ValueError):
+        raise ValueError("answer does not follow the schema: no structured_output and the result text is not "
+                         f"JSON: {str(reply.get('result'))[:200]}")
+    return validate(answer)
+
+
 def check(answer, menu, shown=None):
     """(action, target) if the answer is well formed and on offer at this gate; ValueError otherwise. `shown` maps
-    the names the expert read (masked cohort ids, block_k) to real targets."""
+    every name this expert may answer with (masked cohort ids, block_k) to the real target; a target is accepted
+    only under one of those names."""
     if not isinstance(answer, dict) or answer.get("action") not in ACTIONS \
             or answer.get("predicted_sign", "no_change") not in SIGNS:
         raise ValueError(f"answer does not follow the schema: {str(answer)[:200]}")
     action, target = answer["action"], answer.get("target")
-    target = (shown or {}).get(target, target)
+    target = (shown or {}).get(target) if type(target) in (str, int) else None
     if action == "keep" or (action == "ordinary_weighting" and menu.get("ordinary_weighting")):
         return action, None
     if action in ("set_cohort", "set_readout") and target in menu.get(action, []):
@@ -132,9 +175,11 @@ def check(answer, menu, shown=None):
 
 class Scripted:
     """Answers read from a JSON file {"informed": [...], "masked": [...]}: entry i answers gate i, a missing entry
-    keeps. Targets are real names. An entry may carry "force": true to adopt its change without the trial margin
-    (tests only)."""
+    keeps. An entry needs only action and target; targets are real names (cohorts) and integers (blocks). An entry
+    may carry "force": true to adopt its change without the trial margin, once its trial has been scored (tests
+    only; no other expert can force)."""
     cost = calls = 0
+    scripted = True
 
     def __init__(self, path):
         self.plan = json.loads(Path(path).read_text())
@@ -148,7 +193,9 @@ class Claude:
     """Live expert. `budget` is this run's cap, or with a ledger the ceiling on what all runs sharing it have
     spent on the expert. Once the budget cannot cover another call, or most of a call's cost was billed to another
     model than the one asked for, the expert is off for the rest of the run and every later gate keeps the
-    incumbent. (A small helper call of the CLI on another model is tolerated.)"""
+    incumbent. (A small helper call of the CLI on another model is tolerated.) A reply that does not follow SCHEMA
+    is an error like any other: the gate keeps the incumbent and the call is not repeated."""
+    scripted = False
 
     def __init__(self, model, effort, budget, timeout, ledger_path, folder):
         self.model, self.effort, self.budget, self.timeout = model, effort, budget, timeout
@@ -189,5 +236,4 @@ class Claude:
             raise RuntimeError(self.off)
         if reply.get("is_error"):
             raise RuntimeError(f"the CLI reported an error: {str(reply.get('result'))[:200]}")
-        answer = reply.get("structured_output")
-        return answer if isinstance(answer, dict) else json.loads(reply["result"])
+        return extract(reply)

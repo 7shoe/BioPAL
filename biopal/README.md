@@ -1,8 +1,10 @@
-# BiOPAL
+# BiOPAL: Core Piece of Bilevel Optimizer Agent in the Loop
 
-Fine-tuning on two levels. OPAL decides how the parameters are updated. At a few checkpoints ("gates") a
+**TL;DR**: BiOPAL is an agentic fine-tuning framework for biological sequence tasks. It builds on [OPAL/reactive optimizers](https://arxiv.org/abs/2610.33826v2) for the inner optimization loop and a domain-expert for the outer loop.
+
+Fine-tuning occurs on two levels. OPAL decides how the parameters are updated. At a few checkpoints (so-called "gates") a
 biological expert reads measurements of the model and may propose one change to what is trained: more loss
-weight on one cohort of rows, or another block feeding the task head. A matched trial on private rows decides
+weight on one cohort of rows, or another read-out layer feeding the task head. A matched trial on private rows decides
 whether the change is adopted. Everything runs through `finetune/finetune.py`.
 
 | File | Job |
@@ -14,11 +16,11 @@ whether the change is adopted. Everything runs through `finetune/finetune.py`.
 | `ledger.py` | cumulative Claude spend across runs |
 | `__main__.py` | `python -m biopal RUN_DIR [GATE]` prints one gate as a readable trace |
 
-## Arms
+## Training Modes
 
-All arms of a comparison share `--panel-frac 0.15` and the seed, so they train on the same 85% of train.
+All modes of a comparison share `--panel-frac 0.15` and the seed, so they train on the same 85% of train.
 
-| Arm | Flags |
+| Mode | Flags |
 | --- | --- |
 | A, AdamW | `--mode plain --panel-frac 0.15` |
 | B, OPAL | `--mode biopal --bio-policy off` |
@@ -28,19 +30,21 @@ All arms of a comparison share `--panel-frac 0.15` and the seed, so they train o
 `--mode keep` in place of `--mode biopal` wraps the optimizer in OPAL without an agent: no OPAL cost, same
 schedule, same gates. With `--expert-script FILE` or `--outer-audit` it makes no Claude call at all.
 
-## Smoke runs (cents)
+## Smoke runs (costs: ¢)
+Experiments can grow costly. As of November 2026, the most cost-efficient (and fastest) choice is `claude-haiku-5-5`.
+This makes it an ideal candidate for debugging.
 
-Run from `finetune/` in the `biopal-v2` env. Both use the cheapest model at low effort and a shared ledger, so
+Run from `finetune/` in the `biopal-v2` env. Both use the cheap `haiku` model at low effort and a shared ledger, so
 the two budgets are ceilings over every run that names the same ledger file.
 
 ```bash
-# offline: gates, trial and rewind with a scripted expert that keeps; no Claude call
+# no Claude call (offline): gates, trial and rewind with a scripted expert
 echo '{"informed": []}' > /tmp/keep.json
 python finetune.py --model ntv2_50m --task nt_tasks_official_splice_sites_donors --limit 6000 --epochs 1 \
   --det strict --mode keep --panel-frac 0.15 --bio-policy expert --expert-script /tmp/keep.json \
   --outer-decisions 1 --outer-steps 32 --outer-audit 16 32 --no-test --out runs/smoke_offline
 
-# live: 3 OPAL decisions, 2 gates with an informed and a masked expert (about $0.012 in total)
+# online: 3 OPAL decisions, 2 gates with an informed and a masked expert (about $0.012 in total)
 OPAL_MODEL=claude-haiku-5-5 OPAL_EFFORT=low python finetune.py --model esm2_t12_35m \
   --task proteingym_gfp_fluorescence --limit 8000 --epochs 1 --det strict --mode biopal --bio-policy expert \
   --outer both --expert-shadow masked --decisions 3 --outer-decisions 2 --outer-steps 32 \
@@ -49,10 +53,12 @@ OPAL_MODEL=claude-haiku-5-5 OPAL_EFFORT=low python finetune.py --model esm2_t12_
 (cd .. && python -m biopal finetune/runs/smoke_live)   # the trace of the first gate with a trial
 ```
 
-## Research pilots
+Note, however, that `haiku` appears inactive for most OPAL updates. It just does not appear capable for the bilevel optimization.
+
+## Research pilots (costs: $)
 
 Full data, one seed, default gate settings (5 OPAL decisions, 5 gates, 64-update trials). Set the three
-placeholders first; the OPAL model and effort are read from the environment (`finetune.py` defaults to
+placeholders first; the OPAL model and effort Vare read from the environment (`finetune.py` defaults to
 `claude-opus-5-5` at high effort when they are unset).
 
 ```bash
@@ -91,25 +97,26 @@ updates and by up to 0.15 in the private loss after 128. NTv2 repeated exactly i
 - `expert/gateN_ROLE_brief.txt` and `_reply.json`: what each expert read and what the CLI returned.
 - `result.json`, key `biopal`: adopted changes, final configuration, Claude spend by role, OPAL agent calls inside
   trial branches (must be 0), and the readout block `best.pt` was saved with.
-- `config.json`, `recipe.panel`: sizes and hashes of F, D and A. Equal hashes mean equal rows across arms.
+- `config.json`, `recipe.panel`: sizes and hashes of F, D and A. Equal hashes mean equal rows across modes.
 
 ## Tests
 
 ```bash
-conda run -n biopal-v2 python -m pytest tests/biopal -q      # CPU, about 40 s, no model download, no Claude call
+# CPU-only no Claude call (runtime: ~1min)
+conda run -n biopal-v2 python -m pytest tests/biopal -q
 ```
 
 ## Known limits
 
-- OPAL copies the training script into its agent's workspace. The agent can therefore read that an outer level
+- *outer loop awareness**: OPAL copies the training script into its agent's workspace. The agent can therefore read that an outer level
   exists; it is not shown the cohort in force, the expert's text or any trial score.
-- The value passed to `optimizer.step(loss=...)` is the unweighted loss in every arm. A program of OPAL's that
+- The value passed to `optimizer.step(loss=...)` is the unweighted loss in every mode. A program of OPAL's that
   reads `ctx.loss` gets that value while its gradients come from the weighted loss; `loss_aware_updater` in each
   `decision` record flags such runs.
 - The rewind clears OPAL's resume note through a private attribute of OPAL 0.3.10 (`_resume_note`); a test fails
   if a later version changes that.
 - After a readout switch the optimizer keeps its statistics from before the switch.
-- A is read at every gate, so it becomes tuning data over a run. Validation and test are never touched by a gate.
+- `A` is read at every gate, so it becomes tuning data over a run. Validation and test are never touched by a gate.
 - The adoption rule's standard error counts only the sampling of rows in A, not how much a short training
   window varies from one run to the next. In the full-data audits (`--outer-audit 16 32 64 128`, keep backend) 25
   to 60% of all cohort options passed at any one horizon, the sign of the difference often flipped between
