@@ -136,8 +136,9 @@ class Scripted:
 
 class Claude:
     """Live expert. `budget` is this run's cap, or with a ledger the ceiling on what all runs sharing it have
-    spent on the expert. Once the budget cannot cover another call, or a call was billed to another model than
-    the one asked for, the expert is off for the rest of the run and every later gate keeps the incumbent."""
+    spent on the expert. Once the budget cannot cover another call, or most of a call's cost was billed to another
+    model than the one asked for, the expert is off for the rest of the run and every later gate keeps the
+    incumbent. (A small helper call of the CLI on another model is tolerated.)"""
 
     def __init__(self, model, effort, budget, timeout, ledger_path, folder):
         self.model, self.effort, self.budget, self.timeout = model, effort, budget, timeout
@@ -169,9 +170,12 @@ class Claude:
         cost = float(reply.get("total_cost_usd") or 0.)
         self.cost += cost
         ledger.charge(self.ledger, "expert", cost, run=str(self.folder.parent), gate=gate + 1, expert=role)
-        billed = sorted(reply.get("modelUsage") or {})
-        if any(not m.startswith(self.model) for m in billed):
-            self.off = f"billed to {billed}, not only {self.model}: the expert is off for the rest of the run"
+        usage = reply.get("modelUsage") or {}
+        paid = {asked: sum(float(v.get("costUSD") or 0.) for m, v in usage.items() if m.startswith(self.model) == asked)
+                for asked in (True, False)}
+        other = sorted(m for m in usage if not m.startswith(self.model))
+        if other and paid[False] >= paid[True]:
+            self.off = f"billed to {other}, not {self.model}: the expert is off for the rest of the run"
             raise RuntimeError(self.off)
         if reply.get("is_error"):
             raise RuntimeError(f"the CLI reported an error: {str(reply.get('result'))[:200]}")

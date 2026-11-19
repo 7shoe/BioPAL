@@ -46,7 +46,7 @@ OPAL_MODEL=claude-haiku-5-5 OPAL_EFFORT=low python finetune.py --model esm2_t12_
   --outer both --expert-shadow masked --decisions 3 --outer-decisions 2 --outer-steps 32 \
   --expert-model claude-haiku-5-5 --expert-effort low --budget 0.20 --expert-budget 0.20 \
   --ledger runs/smoke_ledger.jsonl --out runs/smoke_live
-python -m biopal runs/smoke_live        # from the repo root: the trace of the first gate with a trial
+(cd .. && python -m biopal finetune/runs/smoke_live)   # the trace of the first gate with a trial
 ```
 
 ## Research pilots

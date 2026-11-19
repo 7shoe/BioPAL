@@ -29,6 +29,8 @@ if mode == "unavailable":
 out = dict(type="result", is_error=mode == "error", result="it failed" if mode == "error" else json.dumps(answer),
            total_cost_usd=float(os.environ.get("FAKE_COST", "0.012")),
            modelUsage={"claude-opus-5-5" if mode == "other_model" else model: {}})
+if mode == "helper":
+    out["modelUsage"] = {model: {"costUSD": .011}, "claude-haiku-5-5": {"costUSD": .001}}
 if mode != "text":
     out["structured_output"] = answer
 print(json.dumps(out))
@@ -126,6 +128,15 @@ def test_a_failed_call_keeps_the_incumbent_and_is_not_retried(tmp_path, cli, mon
     assert all(p["informed"]["ok"] is False and message in p["informed"]["error"] for p in proposals)
     assert len(cli()) == (1 if mode == "other_model" else 2)           # one call per gate; none after a wrong model
     assert events(tmp_path / "run", "decision")[0]["proposals"]["informed"]["outcome"] == "failed"
+
+
+def test_a_small_helper_call_on_a_cheaper_model_does_not_switch_the_expert_off(tmp_path, cli, monkeypatch):
+    monkeypatch.setenv("FAKE_MODE", "helper")
+    args, t, bio = toy.make(tmp_path, bio_policy="expert", expert_budget=1., expert_model="claude-opus-5-5",
+                            expert_effort="medium")
+    toy.train(args, t, bio)
+    assert all(p["informed"]["ok"] for p in events(tmp_path, "proposals")) and len(cli()) == 2
+    assert {(flag(c, "--model"), flag(c, "--effort")) for c in cli()} == {("claude-opus-5-5", "medium")}
 
 
 def test_an_answer_in_the_result_text_is_parsed(tmp_path, cli, monkeypatch):
