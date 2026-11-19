@@ -133,6 +133,9 @@ def main():
                    help="run on CPU (smoke tests; real runs need CUDA)")
     p.add_argument("--no-test", action="store_true",
                    help="skip the test evaluation (HPO candidates select on validation only)")
+    p.add_argument("--panel-frac", type=float, default=0.,
+                   help="BiOPAL data roles: hold this fraction of train out of the gradient, "
+                        "half as diagnostic set D and half as private set A (biopal/panel.py)")
     args = p.parse_args()
 
     models, tasks = registries()
@@ -170,8 +173,10 @@ def main():
     if args.objective not in task["tasks"]:
         p.error(f"{args.task} does not register {args.objective}")
     if args.epochs < 1 or args.batch_size < 1 or args.max_steps < 0 \
-            or args.limit < 0 or args.lr <= 0 or args.decisions < 1:
-        p.error("Invalid epochs, batch size, max steps, limit, learning rate, or decisions")
+            or args.limit < 0 or args.lr <= 0 or args.decisions < 1 \
+            or not 0 <= args.panel_frac < 1:
+        p.error("Invalid epochs, batch size, max steps, limit, learning rate, decisions, "
+                "or panel fraction")
     if args.mode == "opal" and (args.budget is None or args.budget <= 0):
         p.error("Live mode requires an explicit --budget, e.g. --budget 5")
     if args.mode == "opal" and args.max_steps:
@@ -266,14 +271,25 @@ def main():
         frames[s] = f
     if classification and any(f[label].nunique() < 2 for f in frames.values()):
         raise ValueError("Each split needs at least two classes for AUROC")
+    fit, roles = np.arange(len(frames["train"])), None  # train rows that give gradients
+    if args.panel_frac:
+        sys.path.append(str(REPO))
+        from biopal import panel as bio_panel
+        roles = bio_panel.split(frames["train"], label, classification,
+                                args.panel_frac, args.seed)
+        fit = roles["F"]
     if classification:
         y_mean, y_std = 0.0, 1.0
     else:
-        y_mean = float(frames["train"][label].mean())
-        y_std = float(frames["train"][label].std())
+        fit_y = frames["train"][label] if roles is None else frames["train"][label].iloc[fit]
+        y_mean = float(fit_y.mean())
+        y_std = float(fit_y.std())
         if not y_std > 0:
             raise ValueError("Constant regression targets in train")
     print("Split sizes:", {s: len(f) for s, f in frames.items()}, flush=True)
+    if roles is not None:
+        print("Train roles (fit F, diagnostic D, private A):",
+              {k: len(v) for k, v in roles.items()}, flush=True)
 
     # ------------------------------------------------------------------ model
     cache = str(cache_dirs[entry["caches"][0]])
@@ -371,7 +387,7 @@ def main():
 
     # -------------------------------------------------------------- optimizer
     trainable = [v for v in net.parameters() if v.requires_grad]
-    full_steps = args.epochs * math.ceil(len(frames["train"]) / args.batch_size)
+    full_steps = args.epochs * math.ceil(len(fit) / args.batch_size)
     total_steps = min(args.max_steps, full_steps) if args.max_steps else full_steps
     groups = [dict(params=[v for v in trainable if v.ndim > 1],
                    weight_decay=args.weight_decay),
@@ -405,6 +421,8 @@ def main():
                   y_mean=y_mean, y_std=y_std, num_out=num_out,
                   spaced_input=spaced, pad_multiple=pad_multiple,
                   hidden_size=hidden_size)
+    if roles is not None:
+        recipe.update(panel_frac=args.panel_frac, panel=bio_panel.manifest(roles))
     data_hash = hashlib.sha256(parquet.read_bytes()).hexdigest()
     versions = {}
     for k in ("torch", "transformers", "numpy", "opal-optimizer", "pandas",
@@ -449,6 +467,31 @@ def main():
             decisions=args.decisions, max_decisions=args.decisions,
             blocking=True, summarize=False, run_dir=str(args.out / "opal"), **extra)
 
+    def update(indices, weights=None):
+        """One optimizer update on train rows `indices`. The training loop and BiOPAL's trial
+        branches both call it. `weights` (BiOPAL cohort weighting) reweights the rows for the
+        gradient only; the loss that is logged and passed to OPAL stays the plain mean."""
+        x, y = batch("train", indices)
+        optimizer.zero_grad(set_to_none=True)
+        out = predict(x)
+        loss = loss_fn(out, y)
+        if not torch.isfinite(loss).item():
+            raise RuntimeError(f"Non-finite training loss at step {scheduler.last_epoch + 1}")
+        if weights is None:
+            loss.backward()
+        else:
+            each = (F.cross_entropy(out, y, reduction="none") if classification
+                    else F.mse_loss(out.squeeze(-1), y, reduction="none"))
+            (each * weights).mean().backward()
+        torch.nn.utils.clip_grad_norm_(trainable, args.clip_norm,
+                                       error_if_nonfinite=True)
+        if wrapped:
+            optimizer.step(loss=loss)
+        else:
+            optimizer.step()
+        scheduler.step()
+        return loss
+
     # ------------------------------------------------------------------ train
     # Reset after wrapping; use an independent RNG for batch permutations.
     seed_all()
@@ -465,24 +508,12 @@ def main():
                 net.train()
                 if args.freeze_backbone:
                     model.eval()  # stable features: no dropout in the backbone
-                order = order_rng.permutation(len(frames["train"]))
+                order = fit[order_rng.permutation(len(fit))]
                 for start in range(0, len(order), args.batch_size):
                     if device != "cpu":
                         torch.cuda.synchronize()
                     tick = time.perf_counter()
-                    x, y = batch("train", order[start:start + args.batch_size])
-                    optimizer.zero_grad(set_to_none=True)
-                    loss = loss_fn(predict(x), y)
-                    if not torch.isfinite(loss).item():
-                        raise RuntimeError(f"Non-finite training loss at step {step + 1}")
-                    loss.backward()
-                    torch.nn.utils.clip_grad_norm_(trainable, args.clip_norm,
-                                                   error_if_nonfinite=True)
-                    if wrapped:
-                        optimizer.step(loss=loss)
-                    else:
-                        optimizer.step()
-                    scheduler.step()
+                    loss = update(order[start:start + args.batch_size])
                     if device != "cpu":
                         torch.cuda.synchronize()
                     training_seconds += time.perf_counter() - tick
