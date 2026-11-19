@@ -123,6 +123,9 @@ def main():
                    help="diagnostic: cap each split at N rows (stratified for classification)")
     p.add_argument("--budget", type=float,
                    help="required positive USD cap for live Claude (--mode opal)")
+    p.add_argument("--decisions", type=int, default=5,
+                   help="OPAL agent decisions per run, also the hard cap incl. "
+                        "agent-requested wake-ups (keep/opal; OPAL's own default is 50)")
     p.add_argument("--det", choices=["strict", "warn", "off"], default="warn",
                    help="deterministic algorithms: strict errors on non-deterministic "
                         "ops (required for --compare parity), warn only warns")
@@ -167,8 +170,8 @@ def main():
     if args.objective not in task["tasks"]:
         p.error(f"{args.task} does not register {args.objective}")
     if args.epochs < 1 or args.batch_size < 1 or args.max_steps < 0 \
-            or args.limit < 0 or args.lr <= 0:
-        p.error("Invalid epochs, batch size, max steps, limit, or learning rate")
+            or args.limit < 0 or args.lr <= 0 or args.decisions < 1:
+        p.error("Invalid epochs, batch size, max steps, limit, learning rate, or decisions")
     if args.mode == "opal" and (args.budget is None or args.budget <= 0):
         p.error("Live mode requires an explicit --budget, e.g. --budget 5")
     if args.mode == "opal" and args.max_steps:
@@ -411,7 +414,9 @@ def main():
         except importlib.metadata.PackageNotFoundError:
             pass
     metadata = dict(recipe=recipe, versions=versions, mode=args.mode,
-                    budget=args.budget, no_test=args.no_test, data_sha256=data_hash,
+                    budget=args.budget, no_test=args.no_test,
+                    decisions=args.decisions if args.mode != "plain" else None,
+                    data_sha256=data_hash,
                     initial_sha256=initial_hash, hostname=socket.gethostname(),
                     conda_env=conda_env, device=device,
                     gpu=torch.cuda.get_device_name(0) if device != "cpu" else None,
@@ -441,6 +446,7 @@ def main():
                  f"selected by lowest end-of-epoch validation {objective_metric}. "
                  "Validation and test metrics are not provided to the agent.",
             backend="keep" if args.mode == "keep" else "claude",
+            decisions=args.decisions, max_decisions=args.decisions,
             blocking=True, summarize=False, run_dir=str(args.out / "opal"), **extra)
 
     # ------------------------------------------------------------------ train

@@ -84,6 +84,7 @@ conda run -n biopal-v2 python finetune.py \
 # OPAL: actual reactive optimizer
 # - performance-oriented: OPAL_MODEL=claude-opus-5-5 OPAL_EFFORT=high, --budget 1
 # - budget-friendly (below): OPAL_MODEL=claude-haiku-5-5 OPAL_EFFORT=low, --budget 0.2
+# - cost scales with --decisions (default 5, hard cap; OPAL alone would ask ~50)
 OPAL_MODEL=claude-haiku-5-5 OPAL_EFFORT=low \
   conda run -n biopal-v2 python finetune.py \
     --model ntv2_50m \
