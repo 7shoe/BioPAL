@@ -161,11 +161,16 @@ def main():
                         "same checkpoint; its proposal is scored, never adopted")
     b.add_argument("--expert-script", type=Path,
                    help="JSON file of scripted proposals instead of Claude calls")
+    b.add_argument("--expert-model", default="claude-haiku-5-5")
+    b.add_argument("--expert-effort", default="low")
+    b.add_argument("--expert-budget", type=float,
+                   help="USD cap on the expert's Claude calls (required for a live expert)")
+    b.add_argument("--expert-timeout", type=float, default=120., help="seconds per expert call")
     b.add_argument("--check-every", type=int, default=50,
                    help="OPAL's check interval in updates; BiOPAL schedules fall on checks")
     b.add_argument("--ledger", type=Path,
                    help="JSON-lines file of Claude spend shared by several runs; with it, "
-                        "--budget is a ceiling on their sum")
+                        "--budget and --expert-budget are ceilings on their sums")
     args = p.parse_args()
 
     models, tasks = registries()
@@ -210,8 +215,10 @@ def main():
         args.outer_audit = [16, 32, 64, 128]
     if (args.mode == "biopal" or args.bio_policy != "off" or args.outer_audit) and not use_bio:
         p.error("BiOPAL needs --panel-frac > 0 and --mode biopal (or keep, its offline twin)")
-    if args.bio_policy == "expert" and (args.outer == "off" or not args.expert_script):
-        p.error("--bio-policy expert needs --outer and --expert-script")
+    if args.bio_policy == "expert" and (args.outer == "off" or not (
+            args.expert_script or (args.expert_budget or 0) > 0)):
+        p.error("--bio-policy expert needs --outer and either --expert-budget (live Claude "
+                "calls) or --expert-script")
     if args.outer_steps < 1 or args.outer_decisions < 1 or not 0 < args.outer_alpha < 1 \
             or min(args.outer_audit or [1]) < 1:
         p.error("Invalid --outer-steps, --outer-decisions, --outer-alpha or --outer-audit")

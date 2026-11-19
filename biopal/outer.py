@@ -119,7 +119,13 @@ class Outer:
         self.audit = sorted(args.outer_audit) if args.outer_audit is not None else None
         self.horizon = max([args.outer_steps] + (self.audit or []))
         self.roles = [] if args.bio_policy != "expert" else ["informed"] + ["masked"] * (args.expert_shadow == "masked")
-        self.expert = expert.Scripted(args.expert_script) if self.roles else None
+        self.expert = None
+        if self.roles:
+            self.expert = expert.Scripted(args.expert_script) if args.expert_script else expert.Claude(
+                args.expert_model, args.expert_effort, args.expert_budget, args.expert_timeout, args.ledger,
+                t.out / "expert")
+        self.names = {role: panel.names(self.defs, t.task, t.modality, t.model, masked=role == "masked")
+                      for role in self.roles}
         self.gates, dropped = [], []
         if self.roles or self.audit:
             self.gates, dropped = place(spaced(t.total, args.outer_decisions, args.check_every), self.decisions,
@@ -240,11 +246,23 @@ class Outer:
                     raise RuntimeError("Non-finite loss on the private set")
         return out
 
-    def propose(self, role, gate, m, menu):
-        """One proposal; a failed call or an unusable answer keeps the incumbent and is not retried."""
+    def propose(self, role, gate, update, m, menu):
+        """One proposal; a failed call or an unusable answer keeps the incumbent and is not retried. Each expert
+        gets the same checkpoint and its own earlier proposals, in the names it reads."""
+        names, t = self.names[role], self.t
+        text = expert.brief(dict(
+            task=t.task, modality=t.modality, model=t.model, blocks=t.blocks or "an unknown number of",
+            objective="classification" if t.classification else "regression", defs=self.defs, update=update,
+            total=t.total, config=self.config(), table=m["table"], menu=menu, k=self.args.outer_steps,
+            alpha=self.args.outer_alpha, history=[h for h in self.history if h["role"] == role]),
+            names, masked=role == "masked")
+        (t.out / "expert").mkdir(exist_ok=True)
+        (t.out / "expert" / f"gate{gate + 1}_{role}_brief.txt").write_text(text)
+        shown = {names[c]: c for c in menu.get("set_cohort", [])}
+        shown.update({f"block_{k}": k for k in menu.get("set_readout", [])})
         try:
-            answer = self.expert.propose(role, gate)
-            action, target = expert.check(answer, menu)
+            answer = self.expert.propose(role, gate, text)
+            action, target = expert.check(answer, menu, shown)
             return dict(answer, action=action, target=target, ok=True)
         except Exception as e:
             return dict(action="keep", target=None, ok=False, error=f"{type(e).__name__}: {e}")
@@ -258,7 +276,7 @@ class Outer:
         menu = self.menu(m)
         self.write(event="table", gate=i, update=update, config=self.config(), table=m["table"],
                    panel_loss=m["panel_loss"], fit_loss=m["fit_loss"], menu=menu)
-        proposals = {role: self.propose(role, i, m, menu) for role in self.roles}
+        proposals = {role: self.propose(role, i, update, m, menu) for role in self.roles}
         self.write(event="proposals", gate=i, update=update, **proposals)
         self.log.flush()
         os.fsync(self.log.fileno())                     # every proposal is on disk before A is read
@@ -323,12 +341,16 @@ class Outer:
             outcome = ("kept" if p["action"] == "keep" and p["ok"] else "failed" if not p["ok"] or "failed" in r
                        else "passed" if r["horizons"][a.outer_steps]["passes"] else "did not pass")
             p.update(outcome=outcome, trial=r.get("horizons", {}).get(a.outer_steps))
+            if p["trial"] and p.get("predicted_sign"):   # did the expert call the direction of its own trial?
+                d, se = p["trial"]["mean_d"], p["trial"]["se"]
+                p["sign_correct"] = p["predicted_sign"] == ("lower" if d < -se else "higher" if d > se else "no_change")
             self.history.append(dict(gate=i, update=update, role=role, action=p["action"], target=p["target"],
                                      outcome=outcome, config_after=self.config()))
         self.write(event="decision", gate=i, update=update, adopted=adopt is not None,
                    action=adopt[0] if adopt else "keep", target=adopt[1] if adopt else None,
                    forced=bool(adopt and proposals["informed"].get("force")), config_after=self.config(),
-                   proposals={role: {k: p.get(k) for k in ("action", "target", "ok", "error", "outcome", "trial")}
+                   proposals={role: {k: p.get(k) for k in ("action", "target", "ok", "error", "outcome", "trial",
+                                                           "predicted_sign", "sign_correct")}
                               for role, p in proposals.items()},
                    opal_program_changed=changed, opal_calls_in_trial=self.trial_calls,
                    loss_aware_updater=bool(getattr(o, "_step_ctx", False)), next_update=update + 1)
@@ -369,4 +391,5 @@ class Outer:
         self.log.close()
         return dict(opal_decisions=self.decisions, opal_cost_usd=cost, gates=self.gates, adopted=self.adopted,
                     final_config=self.config(), opal_calls_in_trials=self.trial_calls,
+                    expert_calls=getattr(self.expert, "calls", 0), expert_cost_usd=getattr(self.expert, "cost", 0.),
                     bypassed_unchanged=self.idle_ok)

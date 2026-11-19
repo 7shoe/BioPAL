@@ -13,7 +13,8 @@ import torch.nn.functional as F
 from biopal import outer, panel
 
 FLAGS = dict(seed=0, bio_policy="off", check_every=10, ledger=None, outer="both", outer_decisions=2, outer_steps=8,
-             outer_alpha=.2, outer_audit=None, expert_shadow="none", expert_script=None)
+             outer_alpha=.2, outer_audit=None, expert_shadow="none", expert_script=None, expert_model="claude-haiku-5-5",
+             expert_effort="low", expert_budget=None, expert_timeout=5.)
 
 
 class Backbone(torch.nn.Module):
