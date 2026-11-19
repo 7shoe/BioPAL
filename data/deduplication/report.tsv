@@ -1,0 +1,61 @@
+task	source	modality	filter	exempt_because	train	val	test	duplicates_within_split	removed_train	removed_val	removed_train_pct	removed_val_pct	via_exact	via_window	via_revcomp	seconds
+cds_beta_lactamase_complete	cds	protein	exact only	mutational scan of one protein	2424	1500	1033	0	0	0	0.0	0.0	0	0	0	0.0
+cds_beta_lactamase_unique	cds	protein	exact only	mutational scan of one protein	3272	832	1025	0	0	0	0.0	0.0	0	0	0	0.0
+cds_fluorescence	cds	protein	exact only	mutational scan of one protein	20000	1500	1500	0	0	0	0.0	0.0	0	0	0	0.1
+cds_melting_point	cds	protein	near-duplicates		9432	1064	1500	0	6	0	0.06	0.0	0	6	0	51.0
+cds_stability	cds	protein	exact only	designed proteins and their point mutants	20000	1500	1500	0	0	0	0.0	0.0	0	0	0	0.1
+cripsrCas9	crispr_cas9	dna	exact only	guide/off-target pairs a few mismatches apart; split by Hamming clusters at curation	20002	1500	1500	0	0	0	0.0	0.0	0	0	0	0.0
+fish_gue_core_promoter	fish_gue	dna	near-duplicates		17172	1500	1500	0	48	2	0.28	0.13	0	47	3	1.7
+fish_gue_core_promoter_non_tata	fish_gue	dna	near-duplicates		13718	1500	1500	0	58	1	0.42	0.07	0	51	8	1.4
+fish_gue_core_promoter_tata	fish_gue	dna	near-duplicates		3457	432	432	0	1	0	0.03	0.0	0	1	0	0.3
+fish_gue_ctcf	fish_gue	dna	near-duplicates		20000	1500	1500	0	2	0	0.01	0.0	0	1	1	4.5
+fish_gue_pou5f1	fish_gue	dna	near-duplicates		10698	1342	1330	0	556	36	5.2	2.68	0	514	78	2.7
+fish_gue_promoter	fish_gue	dna	near-duplicates		15186	1500	1500	0	359	23	2.36	1.53	0	381	1	4.5
+fish_gue_sox2	fish_gue	dna	near-duplicates		9443	1183	1177	0	95	5	1.01	0.42	0	87	13	2.3
+gen_lrb_bulk_rna_expression	gen_lrb	dna	near-duplicates		6294	699	987	0	27	0	0.43	0.0	0	4	23	10.8
+gen_lrb_cage_prediction	gen_lrb	dna	near-duplicates		7000	1500	1500	0	0	0	0.0	0.0	0	0	0	41.9
+gen_lrb_regulatory_element_enhancer	gen_lrb	dna	near-duplicates		6139	682	1456	0	7	0	0.11	0.0	0	7	0	4.2
+nt_tasks_official_h3k27ac	nt_tasks	dna	near-duplicates		20619	1512	1605	0	2	0	0.01	0.0	0	2	0	5.6
+nt_tasks_official_h3k9me3	nt_tasks	dna	near-duplicates		20688	1511	845	0	0	0	0.0	0.0	0	0	0	5.1
+nt_tasks_official_splice_sites_acceptors	nt_tasks	dna	near-duplicates		20123	1505	2964	0	8	0	0.04	0.0	0	7	1	3.9
+nt_tasks_official_splice_sites_all	nt_tasks	dna	near-duplicates		18324	1507	1959	0	4	0	0.02	0.0	0	2	2	3.3
+nt_tasks_official_splice_sites_donors	nt_tasks	dna	near-duplicates		20056	1503	2957	0	4	0	0.02	0.0	0	3	1	3.9
+plant_gen_poly_a_arabidopsis_thaliana	plant_gen	dna	near-duplicates		20000	1500	1500	0	605	0	3.02	0.0	0	576	29	2.4
+plant_gen_splicing_arabidopsis_thaliana_acceptor	plant_gen	dna	near-duplicates		20000	1500	1500	0	427	0	2.13	0.0	0	419	8	2.4
+plant_gen_splicing_arabidopsis_thaliana_donor	plant_gen	dna	near-duplicates		20000	1500	1500	0	438	0	2.19	0.0	0	433	5	2.4
+proteingym_blat_deng_resistance	proteingym	protein	exact only	mutational scan of one protein	3996	500	500	0	0	0	0.0	0.0	0	0	0	0.0
+proteingym_blat_stiffler_resistance	proteingym	protein	exact only	mutational scan of one protein	3996	500	500	0	0	0	0.0	0.0	0	0	0	0.0
+proteingym_brca1_function	proteingym	protein	exact only	mutational scan of one protein	1469	184	184	0	0	0	0.0	0.0	0	0	0	0.0
+proteingym_gfp_fluorescence	proteingym	protein	exact only	mutational scan of one protein	41372	5171	5171	0	0	0	0.0	0.0	0	0	0	0.1
+proteingym_hsp82_flynn	proteingym	protein	exact only	mutational scan of one protein	10636	1329	1329	0	0	0	0.0	0.0	0	0	0	0.0
+proteingym_hsp82_mishra	proteingym	protein	exact only	mutational scan of one protein	3459	432	432	0	0	0	0.0	0.0	0	0	0	0.0
+proteingym_kcne1_expression	proteingym	protein	exact only	mutational scan of one protein	1871	234	234	0	0	0	0.0	0.0	0	0	0	0.0
+proteingym_kcne1_function	proteingym	protein	exact only	mutational scan of one protein	1851	232	232	0	0	0	0.0	0.0	0	0	0	0.0
+proteingym_kcnj2_function	proteingym	protein	exact only	mutational scan of one protein	5571	696	696	0	0	0	0.0	0.0	0	0	0	0.0
+proteingym_kcnj2_surface	proteingym	protein	exact only	mutational scan of one protein	5533	692	692	0	0	0	0.0	0.0	0	0	0	0.0
+proteingym_p53_null_etoposide	proteingym	protein	exact only	mutational scan of one protein	5973	747	747	0	0	0	0.0	0.0	0	0	0	0.0
+proteingym_p53_null_nutlin	proteingym	protein	exact only	mutational scan of one protein	5973	747	747	0	0	0	0.0	0.0	0	0	0	0.0
+proteingym_p53_wt_nutlin	proteingym	protein	exact only	mutational scan of one protein	5973	747	747	0	0	0	0.0	0.0	0	0	0	0.0
+proteingym_pten_mighell_function	proteingym	protein	exact only	mutational scan of one protein	5808	726	726	0	0	0	0.0	0.0	0	0	0	0.0
+proteingym_q53z42_binding_tapbpr	proteingym	protein	exact only	mutational scan of one protein	2676	334	334	0	0	0	0.0	0.0	0	0	0	0.0
+proteingym_q53z42_expression	proteingym	protein	exact only	mutational scan of one protein	2676	334	334	0	0	0	0.0	0.0	0	0	0	0.0
+proteingym_rask_abundance	proteingym	protein	exact only	mutational scan of one protein	20810	2601	2601	0	0	0	0.0	0.0	0	0	0	0.1
+proteingym_rask_binding_darpin	proteingym	protein	exact only	mutational scan of one protein	19899	2487	2487	0	0	0	0.0	0.0	0	0	0	0.0
+proteingym_s22a1_abundance	proteingym	protein	exact only	mutational scan of one protein	7843	980	980	0	0	0	0.0	0.0	0	0	0	0.0
+proteingym_s22a1_activity	proteingym	protein	exact only	mutational scan of one protein	8076	1009	1009	0	0	0	0.0	0.0	0	0	0	0.0
+proteingym_spike_binding	proteingym	protein	exact only	mutational scan of one protein	3042	380	380	0	0	0	0.0	0.0	0	0	0	0.0
+proteingym_spike_expression	proteingym	protein	exact only	mutational scan of one protein	3038	380	380	0	0	0	0.0	0.0	0	0	0	0.0
+rfam_5_8s_rrna	rfam	rna	exact only	RNA family membership	2308	260	234	0	0	0	0.0	0.0	0	0	0	0.0
+rfam_5s_rrna	rfam	rna	exact only	RNA family membership	2202	170	160	0	0	0	0.0	0.0	0	0	0	0.0
+rfam_trna_easy	rfam	rna	exact only	RNA family membership	20000	1500	1500	0	0	0	0.0	0.0	0	0	0	0.1
+rfam_u1	rfam	rna	exact only	RNA family membership	1850	206	180	0	0	0	0.0	0.0	0	0	0	0.0
+rfam_u2	rfam	rna	exact only	RNA family membership	1954	156	160	0	0	0	0.0	0.0	0	0	0	0.0
+rna_dst_mean_ribosome_load	rna_dst	rna	near-duplicates		20000	1500	1500	0	0	0	0.0	0.0	0	0	0	2.5
+rna_dst_ncrna_family_bnoise0	rna_dst	rna	exact only	RNA family membership	20000	1500	1500	0	0	0	0.0	0.0	0	0	0	0.1
+rna_dst_ncrna_family_bnoise200	rna_dst	rna	exact only	RNA family membership	20000	1500	1500	0	0	0	0.0	0.0	0	0	0	0.2
+rna_dst_splice_site_acceptor	rna_dst	rna	near-duplicates		17723	1500	1500	0	727	0	4.1	0.0	0	727	0	1.6
+rna_dst_splice_site_donor	rna_dst	rna	near-duplicates		17556	1500	1500	0	828	0	4.72	0.0	0	828	0	1.5
+rna_dst_translation_efficiency_hek	rna_dst	rna	near-duplicates		7794	865	960	0	953	51	12.23	5.9	0	1004	0	1.0
+rna_dst_translation_efficiency_muscle	rna_dst	rna	near-duplicates		692	76	81	0	66	3	9.54	3.95	0	69	0	0.1
+rna_dst_translation_efficiency_pc3	rna_dst	rna	near-duplicates		6893	765	850	0	764	53	11.08	6.93	0	817	0	0.9
+sirna	sirna_efficacy	rna	exact only	19-21 nt oligos tiled along their targets; holdout pruned by Hamming distance at curation	3203	148	149	0	0	0	0.0	0.0	0	0	0	0.0
