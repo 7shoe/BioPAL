@@ -20,8 +20,10 @@ batch 16, five epochs, AdamW 2e-5, weight decay .01 on matrix weights only,
 Validation selects the best epoch; test is evaluated once after restoring that
 checkpoint (and after closing OPAL). Agent feedback is training-only.
 
-Modes: plain AdamW, OPAL keep (wrapped, no interventions - parity target), or
-opal (live Claude; requires --budget). --max-steps is a diagnostic run (no
+Modes: plain AdamW, OPAL keep (wrapped, no interventions - parity target),
+opal (live Claude; requires --budget), or biopal (live OPAL as the inner level
+of BiOPAL; see biopal/__init__.py. --mode keep with --panel-frac is its offline
+twin). --max-steps is a diagnostic run (no
 validation/checkpoint/test; plain/keep only). --limit subsamples each split
 for pipeline smoke tests. --compare checks two run dirs for exact parity.
 best.pt holds backbone+head weights, not an optimizer/resume checkpoint.
@@ -43,6 +45,7 @@ import random
 import socket
 import sys
 import time
+import types
 
 REPO = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(REPO / "models" / "backbones"))  # smoke_backbone helpers
@@ -101,7 +104,7 @@ def main():
     p.add_argument("--task", help="name from data/processed/tasks.yaml")
     p.add_argument("--objective", choices=["classification", "regression"],
                    help="required when the task registers both")
-    p.add_argument("--mode", choices=["plain", "keep", "opal"], default="plain")
+    p.add_argument("--mode", choices=["plain", "keep", "opal", "biopal"], default="plain")
     p.add_argument("--out", type=Path)
     p.add_argument("--epochs", type=int, default=5)
     p.add_argument("--batch-size", type=int, default=16)
@@ -133,9 +136,18 @@ def main():
                    help="run on CPU (smoke tests; real runs need CUDA)")
     p.add_argument("--no-test", action="store_true",
                    help="skip the test evaluation (HPO candidates select on validation only)")
-    p.add_argument("--panel-frac", type=float, default=0.,
-                   help="BiOPAL data roles: hold this fraction of train out of the gradient, "
-                        "half as diagnostic set D and half as private set A (biopal/panel.py)")
+    b = p.add_argument_group("BiOPAL (biopal/)")
+    b.add_argument("--panel-frac", type=float,
+                   help="hold this fraction of train out of the gradient, half as diagnostic "
+                        "set D and half as private set A (default 0; 0.15 with --mode biopal)")
+    b.add_argument("--bio-policy", choices=["off", "fixed"], default="off",
+                   help="what OPAL sees besides the loss on D: nothing more (off), or the "
+                        "whole-panel baseline and generalization gaps (fixed)")
+    b.add_argument("--check-every", type=int, default=50,
+                   help="OPAL's check interval in updates; BiOPAL schedules fall on checks")
+    b.add_argument("--ledger", type=Path,
+                   help="JSON-lines file of Claude spend shared by several runs; with it, "
+                        "--budget is a ceiling on their sum")
     args = p.parse_args()
 
     models, tasks = registries()
@@ -172,15 +184,29 @@ def main():
         args.objective = task["tasks"][0]
     if args.objective not in task["tasks"]:
         p.error(f"{args.task} does not register {args.objective}")
+    live = args.mode in ("opal", "biopal")
+    if args.panel_frac is None:
+        args.panel_frac = .15 if args.mode == "biopal" else 0.
+    use_bio = args.mode in ("keep", "biopal") and args.panel_frac > 0
+    if (args.mode == "biopal" or args.bio_policy != "off") and not use_bio:
+        p.error("BiOPAL needs --panel-frac > 0 and --mode biopal (or keep, its offline twin)")
     if args.epochs < 1 or args.batch_size < 1 or args.max_steps < 0 \
             or args.limit < 0 or args.lr <= 0 or args.decisions < 1 \
             or not 0 <= args.panel_frac < 1:
         p.error("Invalid epochs, batch size, max steps, limit, learning rate, decisions, "
                 "or panel fraction")
-    if args.mode == "opal" and (args.budget is None or args.budget <= 0):
+    if live and (args.budget is None or args.budget <= 0):
         p.error("Live mode requires an explicit --budget, e.g. --budget 5")
-    if args.mode == "opal" and args.max_steps:
+    if live and args.max_steps:
         p.error("Use plain/keep for --max-steps diagnostics")
+    budget_left = args.budget
+    if live and args.ledger:
+        sys.path.append(str(REPO))
+        from biopal import ledger
+        budget_left = args.budget - ledger.spent(args.ledger, "opal")
+        if budget_left < .01:
+            p.error(f"OPAL ceiling of ${args.budget} is used up in {args.ledger}; "
+                    "continue offline with --mode keep")
     if args.out.exists():
         p.error(f"Output already exists; choose a new directory: {args.out}")
     conda_env = os.environ.get("CONDA_DEFAULT_ENV")
@@ -316,14 +342,20 @@ def main():
         return {k: v.to(device) for k, v in b.items()
                 if k in ("input_ids", "attention_mask")}
 
-    def predict(batch):
-        hidden = forward_hidden(base, batch)
+    def pool(hidden, batch):
         mask = batch.get("attention_mask")
         if mask is not None and mask.shape[1] != hidden.shape[1]:
             mask = None  # backbone changes sequence resolution (NTv3 U-Net)
-        pooled = ((hidden * mask.unsqueeze(-1)).sum(1) / mask.sum(1, keepdim=True)
-                  if mask is not None else hidden.mean(1))
-        return head(pooled)
+        return ((hidden * mask.unsqueeze(-1)).sum(1) / mask.sum(1, keepdim=True)
+                if mask is not None else hidden.mean(1))
+
+    def predict(batch, layers=None):
+        """Task output. With `layers` (BiOPAL layer probes) also the pooled output of those
+        hidden states, from the same forward pass."""
+        if not layers:
+            return head(pool(forward_hidden(base, batch), batch))
+        hs = base(**batch, output_hidden_states=True).hidden_states
+        return head(pool(hs[-1], batch)), {k: pool(hs[k], batch) for k in layers}
 
     with torch.no_grad():  # re-encode the probe: encode() honors pad_multiple
         hidden_size = forward_hidden(
@@ -331,6 +363,11 @@ def main():
     head = torch.nn.Linear(hidden_size, num_out).to(device)
     net = torch.nn.ModuleDict(dict(backbone=model, head=head))
     initial_hash = parameter_hash(net)
+    blocks = None  # BiOPAL: number of blocks, if every layer's output can be read
+    if use_bio:
+        from biopal import outer as bio_outer
+        blocks = bio_outer.blocks(
+            base, encode(frames["train"]["sequence"].head(2).tolist()), forward_hidden)
 
     def batch(split, indices):
         rows = frames[split].iloc[np.asarray(indices)]
@@ -345,6 +382,27 @@ def main():
     def loss_fn(out, y):
         return (F.cross_entropy(out, y) if classification
                 else F.mse_loss(out.squeeze(-1), y))
+
+    @torch.no_grad()
+    def rows(indices, layers=None):
+        """BiOPAL: per-row loss on train rows in evaluation mode (and the pooled output of the
+        given hidden states); module modes are left as they were."""
+        modes = [(m, m.training) for m in net.modules()]
+        net.eval()
+        losses, feats = [], {k: [] for k in layers or ()}
+        for start in range(0, len(indices), 4 * args.batch_size):
+            x, y = batch("train", indices[start:start + 4 * args.batch_size])
+            out = predict(x, layers)
+            if layers:
+                out, hidden = out
+                for k in layers:
+                    feats[k].append(hidden[k].cpu())
+            losses.append((F.cross_entropy(out, y, reduction="none") if classification
+                           else F.mse_loss(out.squeeze(-1), y, reduction="none")).cpu())
+        for m, was in modes:
+            m.training = was
+        return (torch.cat(losses).double().numpy(),
+                {k: torch.cat(v).double().numpy() for k, v in feats.items()})
 
     @torch.no_grad()
     def evaluate(split):
@@ -447,7 +505,7 @@ def main():
     if wrapped:
         import opal
         extra = {} if args.mode == "keep" else dict(
-            max_cost_usd=args.budget,
+            max_cost_usd=budget_left,
             backend_options=dict(
                 model=os.environ.get("OPAL_MODEL", "claude-opus-5-5"),
                 effort=os.environ.get("OPAL_EFFORT", "high"),
@@ -456,6 +514,10 @@ def main():
             ))
         objective_metric = ("cross-entropy" if classification
                             else "mean-squared error")
+        plan = dict(decisions=args.decisions, max_decisions=args.decisions)
+        if use_bio:  # decisions evenly over 15-85% of the run, on OPAL's checks
+            at = bio_outer.spaced(total_steps, args.decisions, args.check_every)
+            plan = dict(schedule=at, max_decisions=len(at), every=args.check_every)
         optimizer = opal.wrap(
             optimizer, net, scheduler=scheduler, total_steps=total_steps,
             goal=f"Fine-tune {args.model} ({entry['repo_id']}) on the "
@@ -464,9 +526,8 @@ def main():
                  f"selected by lowest end-of-epoch validation {objective_metric}. "
                  "Validation and test metrics are not provided to the agent.",
             backend="keep" if args.mode == "keep" else "claude",
-            decisions=args.decisions, max_decisions=args.decisions,
-            blocking=True, summarize=False, run_dir=str(args.out / "opal"), **extra)
-
+            blocking=True, summarize=False, run_dir=str(args.out / "opal"),
+            **plan, **extra)
     def update(indices, weights=None):
         """One optimizer update on train rows `indices`. The training loop and BiOPAL's trial
         branches both call it. `weights` (BiOPAL cohort weighting) reweights the rows for the
@@ -492,6 +553,17 @@ def main():
         scheduler.step()
         return loss
 
+    bio = None
+    if use_bio:
+        bio = bio_outer.Outer(args, types.SimpleNamespace(
+            net=net, optimizer=optimizer, scheduler=scheduler, update=update, rows=rows,
+            frame=frames["train"], label=label, roles=roles, classification=classification,
+            y=(frames["train"][label].to_numpy() if classification else
+               (frames["train"][label].to_numpy(dtype=np.float64) - y_mean) / y_std),
+            num_out=num_out, modality=entry["modality"], task=args.task, model=args.model,
+            device=device, per_epoch=math.ceil(len(fit) / args.batch_size),
+            total=total_steps, blocks=blocks, out=args.out))
+
     # ------------------------------------------------------------------ train
     # Reset after wrapping; use an independent RNG for batch permutations.
     seed_all()
@@ -512,8 +584,11 @@ def main():
                 for start in range(0, len(order), args.batch_size):
                     if device != "cpu":
                         torch.cuda.synchronize()
+                    indices = order[start:start + args.batch_size]
+                    if bio:
+                        bio.before(step + 1)
                     tick = time.perf_counter()
-                    loss = update(order[start:start + args.batch_size])
+                    loss = update(indices, bio.weights(indices) if bio else None)
                     if device != "cpu":
                         torch.cuda.synchronize()
                     training_seconds += time.perf_counter() - tick
@@ -537,6 +612,8 @@ def main():
     finally:
         if wrapped:
             optimizer.close()
+        if bio:
+            bio_summary = bio.close()
     elapsed = time.perf_counter() - started
     final_hash = parameter_hash(net)
     test = None
@@ -551,6 +628,8 @@ def main():
                   training_wall_seconds=training_seconds,
                   seconds_per_update=training_seconds / max(step, 1),
                   training_and_validation_wall_seconds=elapsed)
+    if bio:
+        result["biopal"] = bio_summary
     (args.out / "result.json").write_text(json.dumps(result, indent=2))
     print(json.dumps(result, indent=2), flush=True)
 
