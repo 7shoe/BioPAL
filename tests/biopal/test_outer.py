@@ -266,3 +266,18 @@ def test_audit_scores_every_option_and_a_repeat_of_the_incumbent(tmp_path, class
     repeat = next(b for b in trial["branches"] if b["action"] == "incumbent_repeat")
     assert all(v["mean_d"] == 0 and v["se"] == 0 for v in repeat["horizons"].values())   # the trial's noise floor on CPU
     assert any(v["mean_d"] != 0 for b in trial["branches"] if b["target"] for v in b["horizons"].values())
+
+
+def test_trace_prints_one_gate_from_diagnostics_to_the_next_committed_update(tmp_path, capsys):
+    from biopal.__main__ import trace
+    plan = script(tmp_path, informed=[cohort("gc:high")], masked=[cohort("label:1")])
+    args, t, bio = toy.make(tmp_path, bio_policy="expert", expert_shadow="masked", expert_script=plan)
+    losses, _ = toy.train(args, t, bio)
+    (tmp_path / "config.json").write_text(json.dumps(dict(recipe=dict(
+        model="toy_model", task="toy_task", panel=dict(A=dict(n=len(t.roles["A"])))))))
+    (tmp_path / "train.jsonl").write_text("".join(json.dumps(dict(step=i + 1, loss=x)) + "\n" for i, x in enumerate(losses)))
+    trace(tmp_path)
+    out = capsys.readouterr().out
+    for part in ("Gate 1 after update 30", "1. Checkpoint", "2. Proposals", "set_cohort gc:high [informed]",
+                 "set_cohort label:1 [masked]", "4. Decision", "5. Next committed update 31", "the same value as"):
+        assert part in out
