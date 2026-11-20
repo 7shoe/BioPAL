@@ -4,8 +4,9 @@ Written 2026-11-19. Nothing has been launched. This file is the single descripti
 in which order, and what happens when something fails while nobody is watching. The stage scripts and the run
 manifest are written from it; if they disagree with this file, this file is right.
 
-State on 2026-11-19: the plan is agreed, the sandbox question and the notes are settled. Still to come: the
-start time, and the stage scripts with their run manifest, which are not written yet.
+State on 2026-11-20: ready to launch (section 15). Stage 0 was run once as a trial: all 7 checks and all 16
+tiny runs passed, for $0.07 of Claude spend. The launch repeats stage 0 on the machine as it is then. No run
+of full size has been made yet.
 
 ## 1. What the campaign shows
 
@@ -65,9 +66,10 @@ updates. Agents: `--check-every 50 --decisions 5 --outer-decisions 5 --outer-ste
 - `opal` is the matched variant: it holds the same rows out as BiOPAL, and its agent is shown the loss on the
   diagnostic rows. OPAL without a panel (`--mode opal`) is not run.
 - `plain` against `matched` shows what holding rows out for 60% of the run costs on its own.
-- HPO trials are plain fits on all rows, selected by validation loss, never scored on test. Of the 6 trials,
-  3 are random and 3 are guided by the model. The study runs at seed 42 only; seeds 43 and 44 retrain the
-  winning setting.
+- HPO trials are plain fits on all rows, selected by validation loss, never scored on test. The first trial is
+  the trainer's default setting (seen in the trial of stage 0), the first three trials are the start-up of the
+  search, and the last three are guided by its model. The study runs at seed 42 only; seeds 43 and 44 retrain
+  the winning setting.
 
 ### Claude settings
 
@@ -142,7 +144,10 @@ A failed check switches off only the runs that depend on it.
 9. One tiny run of every kind on `mrl` (few rows, Haiku at low effort): `plain`, `matched`, `opal`, `biopal`,
    `biopal_qwen`, an HPO study of one trial with its winner, an audit, a replay. Each must leave its result
    file, and each paid one its ledger rows and the model and effort it was told to use.
-10. One tiny paid run with a cap of a few cents, to record what the trainer does when a cap is reached.
+10. One tiny paid run with a cap of one cent, to record what the trainer does when a cap is reached. Seen in
+    the trial: the agent was asked once instead of twice, and the run went on to its end without it.
+11. Every pair is loaded and trained for 30 updates. A pair that fails here, or a kind of run whose tiny run
+    fails, is switched off for the later stages.
 
 ### Stage 1b: pilot
 
@@ -254,7 +259,11 @@ uses it afterwards. Everything is on one shared filesystem that was 98% full on 
 
 ## 7. What every run leaves behind
 
-A few MB per run, in `finetune/runs/campaign/<stage>/<pair>/<run name>_s<seed>/` (not in git):
+A few MB per run, in `finetune/runs/campaign/<group>/<pair>/<run name>_s<seed>/` (not in git). The groups are
+`ready` (stage 0), `main` (stages 1 to 3), `pilot_<setting>` (stage 1b), `ablation_expert` (stage 4) and
+`ablation_agent` (stage 5). This path without its first part is the run's id in `runs.tsv` and in the status
+table, for example `main/h3k27ac/biopal_s42`. What a run printed is in `finetune/runs/campaign/_logs/`, one
+file per attempt.
 
 | File | Content |
 |---|---|
@@ -286,8 +295,19 @@ stage 0 confirms where it is written.
 Cut order when time runs out: stage 5 first, then the `melt` audit, then seed 44 of `biopal_qwen`. The seed-42
 table and the `matched` runs are never cut.
 
-Status files in `experiments/campaign/status/`: one table with every run and its state, rewritten after each
-run; a failure log; a spend summary; a log of every manual or agent intervention.
+Status files in `experiments/campaign/status/` (written by the scripts, not in git):
+
+| File | Content |
+|---|---|
+| `summary.txt` | counts per stage, free disk, Claude spend per budget line; the first thing to read |
+| `status.tsv` | every run with its state (done, running, pending, failed), the reason it waits or was skipped, card, minutes, USD |
+| `failures.log` | every failed attempt with its reason and the path of its log |
+| `events.log` | every start and end of a run |
+| `readiness.txt` | the checks and the tiny runs of stage 0, PASS or FAIL |
+| `report.md`, `results.tsv`, `plots/` | the report of stage 6 |
+| `campaign.log` | everything `campaign.sh` printed |
+| `ledgers/` | one spend file per paid run |
+| `interventions.log` | every manual or agent intervention, written by whoever intervenes |
 
 ### What a monitoring agent may do
 
@@ -387,7 +407,35 @@ Proposed in this file and not yet confirmed by the user:
 | Path | Content | State |
 |---|---|---|
 | `README.md` | this protocol | written |
-| `runs.tsv` | one row per run: stage, pair, run name, seed, env, memory need, expected minutes, paid or free | to be written with the scripts |
-| `notes/` | the six task notes | fixed on 2026-11-19; do not edit (the hashes in section 12 would no longer match) |
-| `stage_*.sh`, `campaign.sh` | one script per stage, and one that chains them | to be written |
-| `status/` | written by the scripts while the campaign runs | empty until launch |
+| `runs.tsv` | one row per run: id, stage, pair, run name, seed, Claude setting, kind, env, memory need, expected minutes, paid or free, what it needs first | written by `campaign.py manifest` |
+| `campaign.py` | the runner: picks cards, enforces budget, disk and time limits, keeps the status files | written |
+| `stage_*.sh`, `campaign.sh` | one script per stage, and one that chains them | written |
+| `qwen_server.sh` | starts, stops and checks the local expert (tmux session `qwen`) | written |
+| `report.py` | stage 6 | written |
+| `test_campaign.py` | checks the runner's handling of failures, time limits, skipped runs and the budget with fake commands; 10 seconds, no GPU, no Claude call. Run it after any change to `campaign.py` | written |
+| `notes/` | the six task notes and `hashes.tsv` | fixed on 2026-11-19; do not edit (the hashes in section 12 would no longer match) |
+| `keep.json` | the scripted expert of the audits: it always keeps | written |
+| `status/` | written by the scripts while the campaign runs | not in git |
+
+## 15. How to launch and watch
+
+```bash
+cd /home/csiebenschuh/Projects/biopal
+tmux new-session -d -s campaign 'experiments/campaign/campaign.sh'   # the whole campaign, detached
+cat experiments/campaign/status/summary.txt                          # where it stands
+tail -f experiments/campaign/status/campaign.log                     # what it is doing
+```
+
+- `campaign.sh` sets the clock (`status/t0`) on its first start, repeats stage 0 on the machine as it is then,
+  and runs the stages in the order of section 3. Stage 1 runs beside stages 1b and 2, and stage 4 beside
+  stage 5. The report is written after seed 42 and again at the end. Before the last report, runs that were
+  deferred or failed once get another chance, most important first.
+- Started again after an interruption, it continues: runs with a result are skipped, the clock stays. Jobs of
+  a runner that was stopped go on by themselves and are booked by the next runner.
+- One stage by hand: `experiments/campaign/stage_3_seeds43_44.sh`. One run by hand:
+  `python3 experiments/campaign/campaign.py run --stage 2 --only main/h3k27ac/biopal_s42`. Add `--dry-run` to
+  either to see the commands without starting anything.
+- Stage 0 also loads every pair and trains it for 30 updates. A pair that does not load, or a kind of run
+  whose tiny run fails, is switched off for the later stages (`status/readiness.txt` says which).
+- After the user signed off on the results: `python3 experiments/campaign/campaign.py cleanup --yes` deletes the
+  kept checkpoints, and `experiments/campaign/qwen_server.sh stop` ends the local expert.

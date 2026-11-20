@@ -1,0 +1,164 @@
+id	stage	pair	name	seed	setting	kind	env	need_gb	minutes	paid	runs	needs	soft
+ready/ctcf/probe_s42	0	ctcf	probe	42	tiny	train	biopal-v2	12	5		1		
+ready/h3k27ac/probe_s42	0	h3k27ac	probe	42	tiny	train	biopal-v2	12	5		1		
+ready/splice/probe_s42	0	splice	probe	42	tiny	train	bio-rna	12	5		1		
+ready/mrl/probe_s42	0	mrl	probe	42	tiny	train	bio-rna	12	5		1		
+ready/melt/probe_s42	0	melt	probe	42	tiny	train	biopal-v2	30	5		1		
+ready/gfp/probe_s42	0	gfp	probe	42	tiny	train	biopal-v2	12	5		1		
+ready/mrl/plain_s42	0	mrl	plain	42	tiny	train	bio-rna	12	5		1		
+ready/mrl/matched_s42	0	mrl	matched	42	tiny	train	bio-rna	12	5		1		
+ready/mrl/opal_s42	0	mrl	opal	42	tiny	train	bio-rna	12	5	agent	1		
+ready/mrl/biopal_s42	0	mrl	biopal	42	tiny	train	bio-rna	12	5	agent+expert	1		
+ready/mrl/biopal_qwen_s42	0	mrl	biopal_qwen	42	tiny	train	bio-rna	12	5	agent	1		
+ready/mrl/opal_cap_s42	0	mrl	opal_cap	42	tiny	train	bio-rna	12	5	agent	1		
+ready/mrl/hpo_study_s42	0	mrl	hpo_study	42	tiny	hpo	bio-rna	12	5		1		
+ready/mrl/audit_s42	0	mrl	audit	42	tiny	audit	bio-rna	12	5		1		
+ready/mrl/hpo_s42	0	mrl	hpo	42	tiny	train	bio-rna	12	5		1	ready/mrl/hpo_study_s42	
+ready/mrl/replay_s42	0	mrl	replay	42	tiny	replay	bio-rna	0	15	hosted	1	ready/mrl/audit_s42	
+main/ctcf/hpo_study_s42	1	ctcf	hpo_study	42	default	hpo	biopal-v2	12	66		6		
+main/ctcf/plain_s42	1	ctcf	plain	42	default	train	biopal-v2	12	11		1		
+main/ctcf/matched_s42	1	ctcf	matched	42	default	train	biopal-v2	12	11		1		
+main/h3k27ac/hpo_study_s42	1	h3k27ac	hpo_study	42	default	hpo	biopal-v2	12	48		6		
+main/h3k27ac/plain_s42	1	h3k27ac	plain	42	default	train	biopal-v2	12	8		1		
+main/h3k27ac/matched_s42	1	h3k27ac	matched	42	default	train	biopal-v2	12	8		1		
+main/splice/hpo_study_s42	1	splice	hpo_study	42	default	hpo	bio-rna	12	48		6		
+main/splice/plain_s42	1	splice	plain	42	default	train	bio-rna	12	8		1		
+main/splice/matched_s42	1	splice	matched	42	default	train	bio-rna	12	8		1		
+main/mrl/hpo_study_s42	1	mrl	hpo_study	42	default	hpo	bio-rna	12	42		6		
+main/mrl/plain_s42	1	mrl	plain	42	default	train	bio-rna	12	7		1		
+main/mrl/matched_s42	1	mrl	matched	42	default	train	bio-rna	12	7		1		
+main/melt/hpo_study_s42	1	melt	hpo_study	42	default	hpo	biopal-v2	30	84		6		
+main/melt/plain_s42	1	melt	plain	42	default	train	biopal-v2	30	14		1		
+main/melt/matched_s42	1	melt	matched	42	default	train	biopal-v2	30	14		1		
+main/gfp/hpo_study_s42	1	gfp	hpo_study	42	default	hpo	biopal-v2	12	120		6		
+main/gfp/plain_s42	1	gfp	plain	42	default	train	biopal-v2	12	20		1		
+main/gfp/matched_s42	1	gfp	matched	42	default	train	biopal-v2	12	20		1		
+pilot_default/h3k27ac/opal_s42	1b	h3k27ac	opal	42	default	train	biopal-v2	12	9	agent	1		
+pilot_default/h3k27ac/biopal_s42	1b	h3k27ac	biopal	42	default	train	biopal-v2	12	14	agent+expert	1		
+pilot_default/mrl/opal_s42	1b	mrl	opal	42	default	train	bio-rna	12	8	agent	1		
+pilot_default/mrl/biopal_s42	1b	mrl	biopal	42	default	train	bio-rna	12	12	agent+expert	1		
+pilot_sonnet/h3k27ac/opal_s42	1b	h3k27ac	opal	42	sonnet	train	biopal-v2	12	9	agent	1		
+pilot_sonnet/h3k27ac/biopal_s42	1b	h3k27ac	biopal	42	sonnet	train	biopal-v2	12	14	agent+expert	1		
+pilot_sonnet/mrl/opal_s42	1b	mrl	opal	42	sonnet	train	bio-rna	12	8	agent	1		
+pilot_sonnet/mrl/biopal_s42	1b	mrl	biopal	42	sonnet	train	bio-rna	12	12	agent+expert	1		
+pilot_opus_high/mrl/opal_s42	1b	mrl	opal	42	opus_high	train	bio-rna	12	8	agent	1		
+pilot_opus_high/mrl/biopal_s42	1b	mrl	biopal	42	opus_high	train	bio-rna	12	12	agent+expert	1		
+main/ctcf/biopal_s42	2	ctcf	biopal	42	default	train	biopal-v2	12	19	agent+expert	1		
+main/ctcf/opal_s42	2	ctcf	opal	42	default	train	biopal-v2	12	13	agent	1		
+main/ctcf/biopal_qwen_s42	2	ctcf	biopal_qwen	42	default	train	biopal-v2	12	19	agent	1		
+main/ctcf/hpo_s42	2	ctcf	hpo	42	default	train	biopal-v2	12	11		1	main/ctcf/hpo_study_s42	
+main/h3k27ac/biopal_s42	2	h3k27ac	biopal	42	default	train	biopal-v2	12	14	agent+expert	1		
+main/h3k27ac/opal_s42	2	h3k27ac	opal	42	default	train	biopal-v2	12	9	agent	1		
+main/h3k27ac/biopal_qwen_s42	2	h3k27ac	biopal_qwen	42	default	train	biopal-v2	12	14	agent	1		
+main/h3k27ac/hpo_s42	2	h3k27ac	hpo	42	default	train	biopal-v2	12	8		1	main/h3k27ac/hpo_study_s42	
+main/splice/biopal_s42	2	splice	biopal	42	default	train	bio-rna	12	14	agent+expert	1		
+main/splice/opal_s42	2	splice	opal	42	default	train	bio-rna	12	9	agent	1		
+main/splice/biopal_qwen_s42	2	splice	biopal_qwen	42	default	train	bio-rna	12	14	agent	1		
+main/splice/hpo_s42	2	splice	hpo	42	default	train	bio-rna	12	8		1	main/splice/hpo_study_s42	
+main/mrl/biopal_s42	2	mrl	biopal	42	default	train	bio-rna	12	12	agent+expert	1		
+main/mrl/opal_s42	2	mrl	opal	42	default	train	bio-rna	12	8	agent	1		
+main/mrl/biopal_qwen_s42	2	mrl	biopal_qwen	42	default	train	bio-rna	12	12	agent	1		
+main/mrl/hpo_s42	2	mrl	hpo	42	default	train	bio-rna	12	7		1	main/mrl/hpo_study_s42	
+main/melt/biopal_s42	2	melt	biopal	42	default	train	biopal-v2	30	24	agent+expert	1		
+main/melt/opal_s42	2	melt	opal	42	default	train	biopal-v2	30	16	agent	1		
+main/melt/biopal_qwen_s42	2	melt	biopal_qwen	42	default	train	biopal-v2	30	24	agent	1		
+main/melt/hpo_s42	2	melt	hpo	42	default	train	biopal-v2	30	14		1	main/melt/hpo_study_s42	
+main/gfp/biopal_s42	2	gfp	biopal	42	default	train	biopal-v2	12	35	agent+expert	1		
+main/gfp/opal_s42	2	gfp	opal	42	default	train	biopal-v2	12	23	agent	1		
+main/gfp/biopal_qwen_s42	2	gfp	biopal_qwen	42	default	train	biopal-v2	12	35	agent	1		
+main/gfp/hpo_s42	2	gfp	hpo	42	default	train	biopal-v2	12	20		1	main/gfp/hpo_study_s42	
+main/ctcf/plain_s43	3	ctcf	plain	43	default	train	biopal-v2	12	11		1		main/ctcf/plain_s42
+main/ctcf/matched_s43	3	ctcf	matched	43	default	train	biopal-v2	12	11		1		main/ctcf/matched_s42
+main/ctcf/biopal_s43	3	ctcf	biopal	43	default	train	biopal-v2	12	19	agent+expert	1		main/ctcf/biopal_s42
+main/ctcf/opal_s43	3	ctcf	opal	43	default	train	biopal-v2	12	13	agent	1		main/ctcf/opal_s42
+main/ctcf/biopal_qwen_s43	3	ctcf	biopal_qwen	43	default	train	biopal-v2	12	19	agent	1		main/ctcf/biopal_qwen_s42
+main/ctcf/hpo_s43	3	ctcf	hpo	43	default	train	biopal-v2	12	11		1	main/ctcf/hpo_study_s42	main/ctcf/hpo_s42
+main/h3k27ac/plain_s43	3	h3k27ac	plain	43	default	train	biopal-v2	12	8		1		main/h3k27ac/plain_s42
+main/h3k27ac/matched_s43	3	h3k27ac	matched	43	default	train	biopal-v2	12	8		1		main/h3k27ac/matched_s42
+main/h3k27ac/biopal_s43	3	h3k27ac	biopal	43	default	train	biopal-v2	12	14	agent+expert	1		main/h3k27ac/biopal_s42
+main/h3k27ac/opal_s43	3	h3k27ac	opal	43	default	train	biopal-v2	12	9	agent	1		main/h3k27ac/opal_s42
+main/h3k27ac/biopal_qwen_s43	3	h3k27ac	biopal_qwen	43	default	train	biopal-v2	12	14	agent	1		main/h3k27ac/biopal_qwen_s42
+main/h3k27ac/hpo_s43	3	h3k27ac	hpo	43	default	train	biopal-v2	12	8		1	main/h3k27ac/hpo_study_s42	main/h3k27ac/hpo_s42
+main/splice/plain_s43	3	splice	plain	43	default	train	bio-rna	12	8		1		main/splice/plain_s42
+main/splice/matched_s43	3	splice	matched	43	default	train	bio-rna	12	8		1		main/splice/matched_s42
+main/splice/biopal_s43	3	splice	biopal	43	default	train	bio-rna	12	14	agent+expert	1		main/splice/biopal_s42
+main/splice/opal_s43	3	splice	opal	43	default	train	bio-rna	12	9	agent	1		main/splice/opal_s42
+main/splice/biopal_qwen_s43	3	splice	biopal_qwen	43	default	train	bio-rna	12	14	agent	1		main/splice/biopal_qwen_s42
+main/splice/hpo_s43	3	splice	hpo	43	default	train	bio-rna	12	8		1	main/splice/hpo_study_s42	main/splice/hpo_s42
+main/mrl/plain_s43	3	mrl	plain	43	default	train	bio-rna	12	7		1		main/mrl/plain_s42
+main/mrl/matched_s43	3	mrl	matched	43	default	train	bio-rna	12	7		1		main/mrl/matched_s42
+main/mrl/biopal_s43	3	mrl	biopal	43	default	train	bio-rna	12	12	agent+expert	1		main/mrl/biopal_s42
+main/mrl/opal_s43	3	mrl	opal	43	default	train	bio-rna	12	8	agent	1		main/mrl/opal_s42
+main/mrl/biopal_qwen_s43	3	mrl	biopal_qwen	43	default	train	bio-rna	12	12	agent	1		main/mrl/biopal_qwen_s42
+main/mrl/hpo_s43	3	mrl	hpo	43	default	train	bio-rna	12	7		1	main/mrl/hpo_study_s42	main/mrl/hpo_s42
+main/melt/plain_s43	3	melt	plain	43	default	train	biopal-v2	30	14		1		main/melt/plain_s42
+main/melt/matched_s43	3	melt	matched	43	default	train	biopal-v2	30	14		1		main/melt/matched_s42
+main/melt/biopal_s43	3	melt	biopal	43	default	train	biopal-v2	30	24	agent+expert	1		main/melt/biopal_s42
+main/melt/opal_s43	3	melt	opal	43	default	train	biopal-v2	30	16	agent	1		main/melt/opal_s42
+main/melt/biopal_qwen_s43	3	melt	biopal_qwen	43	default	train	biopal-v2	30	24	agent	1		main/melt/biopal_qwen_s42
+main/melt/hpo_s43	3	melt	hpo	43	default	train	biopal-v2	30	14		1	main/melt/hpo_study_s42	main/melt/hpo_s42
+main/gfp/plain_s43	3	gfp	plain	43	default	train	biopal-v2	12	20		1		main/gfp/plain_s42
+main/gfp/matched_s43	3	gfp	matched	43	default	train	biopal-v2	12	20		1		main/gfp/matched_s42
+main/gfp/biopal_s43	3	gfp	biopal	43	default	train	biopal-v2	12	35	agent+expert	1		main/gfp/biopal_s42
+main/gfp/opal_s43	3	gfp	opal	43	default	train	biopal-v2	12	23	agent	1		main/gfp/opal_s42
+main/gfp/biopal_qwen_s43	3	gfp	biopal_qwen	43	default	train	biopal-v2	12	35	agent	1		main/gfp/biopal_qwen_s42
+main/gfp/hpo_s43	3	gfp	hpo	43	default	train	biopal-v2	12	20		1	main/gfp/hpo_study_s42	main/gfp/hpo_s42
+main/ctcf/plain_s44	3	ctcf	plain	44	default	train	biopal-v2	12	11		1		main/ctcf/plain_s42
+main/ctcf/matched_s44	3	ctcf	matched	44	default	train	biopal-v2	12	11		1		main/ctcf/matched_s42
+main/ctcf/biopal_s44	3	ctcf	biopal	44	default	train	biopal-v2	12	19	agent+expert	1		main/ctcf/biopal_s42
+main/ctcf/opal_s44	3	ctcf	opal	44	default	train	biopal-v2	12	13	agent	1		main/ctcf/opal_s42
+main/ctcf/biopal_qwen_s44	3	ctcf	biopal_qwen	44	default	train	biopal-v2	12	19	agent	1		main/ctcf/biopal_qwen_s42
+main/ctcf/hpo_s44	3	ctcf	hpo	44	default	train	biopal-v2	12	11		1	main/ctcf/hpo_study_s42	main/ctcf/hpo_s42
+main/h3k27ac/plain_s44	3	h3k27ac	plain	44	default	train	biopal-v2	12	8		1		main/h3k27ac/plain_s42
+main/h3k27ac/matched_s44	3	h3k27ac	matched	44	default	train	biopal-v2	12	8		1		main/h3k27ac/matched_s42
+main/h3k27ac/biopal_s44	3	h3k27ac	biopal	44	default	train	biopal-v2	12	14	agent+expert	1		main/h3k27ac/biopal_s42
+main/h3k27ac/opal_s44	3	h3k27ac	opal	44	default	train	biopal-v2	12	9	agent	1		main/h3k27ac/opal_s42
+main/h3k27ac/biopal_qwen_s44	3	h3k27ac	biopal_qwen	44	default	train	biopal-v2	12	14	agent	1		main/h3k27ac/biopal_qwen_s42
+main/h3k27ac/hpo_s44	3	h3k27ac	hpo	44	default	train	biopal-v2	12	8		1	main/h3k27ac/hpo_study_s42	main/h3k27ac/hpo_s42
+main/splice/plain_s44	3	splice	plain	44	default	train	bio-rna	12	8		1		main/splice/plain_s42
+main/splice/matched_s44	3	splice	matched	44	default	train	bio-rna	12	8		1		main/splice/matched_s42
+main/splice/biopal_s44	3	splice	biopal	44	default	train	bio-rna	12	14	agent+expert	1		main/splice/biopal_s42
+main/splice/opal_s44	3	splice	opal	44	default	train	bio-rna	12	9	agent	1		main/splice/opal_s42
+main/splice/biopal_qwen_s44	3	splice	biopal_qwen	44	default	train	bio-rna	12	14	agent	1		main/splice/biopal_qwen_s42
+main/splice/hpo_s44	3	splice	hpo	44	default	train	bio-rna	12	8		1	main/splice/hpo_study_s42	main/splice/hpo_s42
+main/mrl/plain_s44	3	mrl	plain	44	default	train	bio-rna	12	7		1		main/mrl/plain_s42
+main/mrl/matched_s44	3	mrl	matched	44	default	train	bio-rna	12	7		1		main/mrl/matched_s42
+main/mrl/biopal_s44	3	mrl	biopal	44	default	train	bio-rna	12	12	agent+expert	1		main/mrl/biopal_s42
+main/mrl/opal_s44	3	mrl	opal	44	default	train	bio-rna	12	8	agent	1		main/mrl/opal_s42
+main/mrl/biopal_qwen_s44	3	mrl	biopal_qwen	44	default	train	bio-rna	12	12	agent	1		main/mrl/biopal_qwen_s42
+main/mrl/hpo_s44	3	mrl	hpo	44	default	train	bio-rna	12	7		1	main/mrl/hpo_study_s42	main/mrl/hpo_s42
+main/melt/plain_s44	3	melt	plain	44	default	train	biopal-v2	30	14		1		main/melt/plain_s42
+main/melt/matched_s44	3	melt	matched	44	default	train	biopal-v2	30	14		1		main/melt/matched_s42
+main/melt/biopal_s44	3	melt	biopal	44	default	train	biopal-v2	30	24	agent+expert	1		main/melt/biopal_s42
+main/melt/opal_s44	3	melt	opal	44	default	train	biopal-v2	30	16	agent	1		main/melt/opal_s42
+main/melt/biopal_qwen_s44	3	melt	biopal_qwen	44	default	train	biopal-v2	30	24	agent	1		main/melt/biopal_qwen_s42
+main/melt/hpo_s44	3	melt	hpo	44	default	train	biopal-v2	30	14		1	main/melt/hpo_study_s42	main/melt/hpo_s42
+main/gfp/plain_s44	3	gfp	plain	44	default	train	biopal-v2	12	20		1		main/gfp/plain_s42
+main/gfp/matched_s44	3	gfp	matched	44	default	train	biopal-v2	12	20		1		main/gfp/matched_s42
+main/gfp/biopal_s44	3	gfp	biopal	44	default	train	biopal-v2	12	35	agent+expert	1		main/gfp/biopal_s42
+main/gfp/opal_s44	3	gfp	opal	44	default	train	biopal-v2	12	23	agent	1		main/gfp/opal_s42
+main/gfp/biopal_qwen_s44	3	gfp	biopal_qwen	44	default	train	biopal-v2	12	35	agent	1		main/gfp/biopal_qwen_s42
+main/gfp/hpo_s44	3	gfp	hpo	44	default	train	biopal-v2	12	20		1	main/gfp/hpo_study_s42	main/gfp/hpo_s42
+ablation_expert/h3k27ac/audit_s42	4	h3k27ac	audit	42	default	audit	biopal-v2	12	104		1		
+ablation_expert/mrl/audit_s42	4	mrl	audit	42	default	audit	bio-rna	12	91		1		
+ablation_expert/melt/audit_s42	4	melt	audit	42	default	audit	biopal-v2	30	182		1		
+ablation_expert/all/replay_qwen_opus_s42	4	all	replay_qwen_opus	42	default	replay	biopal-v2	0	15	hosted	1	ablation_expert/h3k27ac/audit_s42,ablation_expert/mrl/audit_s42,ablation_expert/melt/audit_s42	
+ablation_expert/all/replay_sonnet_s42	4	all	replay_sonnet	42	default	replay	biopal-v2	0	15	hosted	1	ablation_expert/h3k27ac/audit_s42,ablation_expert/mrl/audit_s42,ablation_expert/melt/audit_s42	
+ablation_agent/h3k27ac/biopal_s42	5	h3k27ac	biopal	42	sonnet	train	biopal-v2	12	14	agent+expert	1		
+ablation_agent/h3k27ac/opal_s42	5	h3k27ac	opal	42	sonnet	train	biopal-v2	12	9	agent	1		
+ablation_agent/mrl/biopal_s42	5	mrl	biopal	42	sonnet	train	bio-rna	12	12	agent+expert	1		
+ablation_agent/mrl/opal_s42	5	mrl	opal	42	sonnet	train	bio-rna	12	8	agent	1		
+ablation_agent/melt/biopal_s42	5	melt	biopal	42	sonnet	train	biopal-v2	30	24	agent+expert	1		
+ablation_agent/melt/opal_s42	5	melt	opal	42	sonnet	train	biopal-v2	30	16	agent	1		
+ablation_agent/h3k27ac/biopal_s43	5	h3k27ac	biopal	43	sonnet	train	biopal-v2	12	14	agent+expert	1		
+ablation_agent/h3k27ac/opal_s43	5	h3k27ac	opal	43	sonnet	train	biopal-v2	12	9	agent	1		
+ablation_agent/mrl/biopal_s43	5	mrl	biopal	43	sonnet	train	bio-rna	12	12	agent+expert	1		
+ablation_agent/mrl/opal_s43	5	mrl	opal	43	sonnet	train	bio-rna	12	8	agent	1		
+ablation_agent/melt/biopal_s43	5	melt	biopal	43	sonnet	train	biopal-v2	30	24	agent+expert	1		
+ablation_agent/melt/opal_s43	5	melt	opal	43	sonnet	train	biopal-v2	30	16	agent	1		
+ablation_agent/h3k27ac/biopal_s44	5	h3k27ac	biopal	44	sonnet	train	biopal-v2	12	14	agent+expert	1		
+ablation_agent/h3k27ac/opal_s44	5	h3k27ac	opal	44	sonnet	train	biopal-v2	12	9	agent	1		
+ablation_agent/mrl/biopal_s44	5	mrl	biopal	44	sonnet	train	bio-rna	12	12	agent+expert	1		
+ablation_agent/mrl/opal_s44	5	mrl	opal	44	sonnet	train	bio-rna	12	8	agent	1		
+ablation_agent/melt/biopal_s44	5	melt	biopal	44	sonnet	train	biopal-v2	30	24	agent+expert	1		
+ablation_agent/melt/opal_s44	5	melt	opal	44	sonnet	train	biopal-v2	30	16	agent	1		
