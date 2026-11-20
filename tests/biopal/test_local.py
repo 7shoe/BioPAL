@@ -170,12 +170,32 @@ def test_proxy_settings_of_the_environment_are_not_used(tmp_path, endpoint, monk
     assert client.propose("informed", 0, "ACTIONS\n  set_cohort <cohort>: On offer: gc:low, gc:high")["target"] == "gc:low"
 
 
+def test_only_a_listener_that_can_take_the_connection_counts_as_an_owner_of_the_port(tmp_path):
+    def row(address, uid, state="0A"):
+        return f"   0: {address} 00000000:0000 {state} 00000000:00000000 00:00000000 00000000 {uid} 0 1 1 0 100 0 0 10 0"
+
+    v4, v6 = tmp_path / "tcp", tmp_path / "tcp6"
+    v4.write_text("\n".join(["sl local_address ...",
+                             row("0100007F:1F40", 1000),                # 127.0.0.1:8000, mine
+                             row("174FDD8C:1F40", 2000),                # the same port on the machine's own address
+                             row("0200007F:1F40", 2001),                # ... and on 127.0.0.2
+                             row("0100007F:1F41", 2002),                # another port
+                             row("0100007F:1F40", 2003, state="01")]))  # a connection, not a listener
+    v6.write_text("sl local_address ...\n" + row("00000000000000000000000001000000:1F40", 2004))   # [::1]:8000
+    assert expert.listeners(8000, "127.0.0.1", (v4, v6)) == {1000}
+    v4.write_text(v4.read_text() + "\n" + row("00000000:1F40", 3000))  # every address: this one can take it
+    v6.write_text(v6.read_text() + "\n" + row("0000000000000000FFFF00000100007F:1F40", 3001))   # ::ffff:127.0.0.1
+    assert expert.listeners(8000, "127.0.0.1", (v4, v6)) == {1000, 3000, 3001}
+    assert expert.listeners(8000, "::1", (v4, v6)) == {2004, 3000}
+    assert expert.listeners(8000, "127.0.0.1", (tmp_path / "missing",)) is None
+
+
 def test_the_server_is_checked_before_training_starts(tmp_path, endpoint, monkeypatch):
     def client(model="toy-llm", revision=REVISION, url=None, **more):
         return expert.Local(url or endpoint.url, model, revision, 2., tmp_path, **more)
 
     port = int(endpoint.url.split(":")[2].split("/")[0])
-    assert expert.listeners(port) == {os.getuid()} and client().served["port_owner_checked"] is True
+    assert expert.listeners(port, "127.0.0.1") == {os.getuid()} and client().served["port_owner_checked"] is True
     with pytest.raises(RuntimeError, match="does not serve 'another-model'; it serves \\['toy-llm'\\]"):
         client("another-model")
     with pytest.raises(RuntimeError, match="not revision ffff"):       # the server's path names another commit
@@ -187,7 +207,7 @@ def test_the_server_is_checked_before_training_starts(tmp_path, endpoint, monkey
     endpoint.root, endpoint.version = "toy/llm", None                   # served by name, by a server without /version
     served = client(revision="f" * 40).served
     assert served["revision_in_served_path"] is False and served["serving_version"] is None
-    monkeypatch.setattr(expert, "listeners", lambda port: {os.getuid(), os.getuid() + 1})
+    monkeypatch.setattr(expert, "listeners", lambda port, host: {os.getuid(), os.getuid() + 1})
     with pytest.raises(RuntimeError, match="another user of this machine"):
         client()
     assert len(endpoint.posts()) == 0                                   # nothing was sent to it

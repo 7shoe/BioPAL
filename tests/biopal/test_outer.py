@@ -13,6 +13,35 @@ def test_spaced_falls_on_checks_inside_the_run():
     assert all(u % 10 == 0 and 10 <= u <= 190 for u in outer.spaced(200, 10, 10))
 
 
+def test_gates_end_before_the_held_out_rows_return():
+    release, horizon = 1550, 64                                         # 60% of 2508 updates, on a check
+    top = release - horizon
+    at = outer.spaced(2508, 5, 50, hi=top / 2508, last=top // 50 * 50)
+    assert at == [400, 700, 950, 1250, 1450] and all(u + horizon <= release for u in at)
+    assert outer.place(at, [], horizon, 1254, 2508, 50, release) == ([400, 700, 950, 1300, 1450], [])   # 1250 would cross the epoch
+    assert outer.place([1500], [], horizon, 1254, 2508, 50, release) == ([], [1500])   # its trial would train on A
+    assert outer.place([1500], [], horizon, 1254, 2508, 50) == ([1500], [])            # ... fine while A stays out
+
+
+def test_returned_rows_are_trained_on_after_the_last_trial_and_opal_sees_no_panel_loss_then(tmp_path):
+    plan = script(tmp_path, informed=[cohort("gc:high"), cohort("label:1")])
+    reference, _ = toy.train(*toy.make(tmp_path / "a", wrapped=False, until=.6))        # no OPAL, no gate
+    args, t, bio = toy.make(tmp_path / "b", bio_policy="expert", expert_script=plan, until=.6)
+    held = set(t.roles["D"]) | set(t.roles["A"])
+    assert t.total == 225 == 3 * 75 and t.release == bio.release == 140                # as long as a run on all rows
+    assert bio.decisions == [40, 200] and bio.gates == [40, 130]                       # every trial ends by update 140
+    for gate in bio.gates:
+        assert gate + 8 <= t.release and not held & set(np.concatenate(t.stream[gate:gate + 8]))
+    assert held <= set(np.concatenate(t.stream[t.release:]))
+    assert (np.bincount(np.concatenate(t.stream), minlength=1200) == 3).all()
+    score(bio, t, lambda active: 1. if active else 0.)                  # every candidate loses on A
+    losses, summary = toy.train(args, t, bio)
+    assert losses == reference and summary["adopted"] == []            # nothing adopted: the plain run on these batches
+    schedule, shown = events(tmp_path / "b", "schedule")[0], events(tmp_path / "b", "shown_to_opal")
+    assert schedule["panel_release"] == 140 and [r["update"] for r in shown] == [40, 200]
+    assert "panel_loss" in shown[0] and "panel_loss" not in shown[1] and "readout_block" in shown[1]
+
+
 def test_measuring_for_opal_leaves_training_bitwise_unchanged(tmp_path):
     plain, _ = toy.train(*toy.make(tmp_path / "a", wrapped=False))
     keep, summary = toy.train(*toy.make(tmp_path / "b", bio_policy="fixed"))

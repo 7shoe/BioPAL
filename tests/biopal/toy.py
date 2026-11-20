@@ -45,8 +45,9 @@ def data(n=1200, classification=True, seed=0):
 
 
 def make(tmp_path, backend="keep", classification=True, epochs=3, batch_size=16, decisions=2, n=1200,
-         wrapped=True, **flags):
-    """-> (args, t, bio). bio is None when `wrapped` is False (the plain arm)."""
+         wrapped=True, until=1., **flags):
+    """-> (args, t, bio). bio is None when `wrapped` is False (the plain arm). until: the share of the run the
+    panel is held out for (finetune.py's --panel-until); 1 keeps it out to the end."""
     args = argparse.Namespace(**{**FLAGS, **flags})
     torch.manual_seed(args.seed)
     frame = data(n, classification, args.seed)
@@ -55,8 +56,18 @@ def make(tmp_path, backend="keep", classification=True, epochs=3, batch_size=16,
     y = torch.tensor(frame.y.to_numpy(), dtype=torch.long if classification else torch.float32)
     backbone, num_out = Backbone(), 2 if classification else 1
     net = torch.nn.ModuleDict(dict(backbone=backbone, head=torch.nn.Linear(16, num_out), readout=outer.Readout(16)))
-    per_epoch = math.ceil(len(roles["F"]) / batch_size)
-    total = epochs * per_epoch
+    order_rng, release = np.random.default_rng(args.seed), None     # the batches of the run, as finetune.py draws them
+    if until < 1:
+        stream, release = panel.stream(roles, n, batch_size, epochs, order_rng, until, args.check_every)
+        per_epoch = math.ceil(n / batch_size)
+        ends = [per_epoch * e for e in range(1, epochs + 1)]
+    else:
+        per_epoch, stream, ends = math.ceil(len(roles["F"]) / batch_size), [], []
+        for _ in range(epochs):
+            order = roles["F"][order_rng.permutation(len(roles["F"]))]
+            stream += [order[s:s + batch_size] for s in range(0, len(order), batch_size)]
+            ends.append(len(stream))
+    total = len(stream)
     base = torch.optim.AdamW(net.parameters(), lr=3e-3, weight_decay=.05)
     scheduler = torch.optim.lr_scheduler.LambdaLR(base, lambda s: 1 - s / (total + 1))
     optimizer = base
@@ -104,27 +115,25 @@ def make(tmp_path, backend="keep", classification=True, epochs=3, batch_size=16,
         net=net, optimizer=optimizer, scheduler=scheduler, update=update, rows=rows, frame=frame, label="y",
         roles=roles, classification=classification, y=frame.y.to_numpy(), num_out=num_out, modality="dna",
         task="toy_task", model="toy_model", device="cpu", per_epoch=per_epoch, total=total, blocks=4,
-        out=tmp_path, epochs=epochs, batch_size=batch_size, wrapped=wrapped)
+        out=tmp_path, epochs=epochs, batch_size=batch_size, wrapped=wrapped, stream=stream, ends=ends,
+        release=release)
     return args, t, (outer.Outer(args, t) if wrapped else None)
 
 
 def train(args, t, bio, switch=None):
     """The training loop of finetune.py, without validation. -> the loss of every committed update.
     switch: {update: cohort} sets the cohort after that update without a gate (the reference for an adoption)."""
-    order_rng, losses, step = np.random.default_rng(args.seed), [], 0
+    losses, epoch = [], 0
     t.net.train()
-    for _ in range(t.epochs):
-        order = t.roles["F"][order_rng.permutation(len(t.roles["F"]))]
-        for start in range(0, len(order), t.batch_size):
-            indices = order[start:start + t.batch_size]
-            if bio:
-                bio.before(step + 1)
-            losses.append(t.update(indices, bio.weights(indices) if bio else None).item())
-            step += 1
-            if switch and step in switch:
-                bio.set_cohort(switch[step])
-            if bio and step in bio.gates:
-                bio.gate(step, [order[s:s + t.batch_size] for s in range(start + t.batch_size, len(order), t.batch_size)])
+    for step, indices in enumerate(t.stream, 1):
+        if bio:
+            bio.before(step)
+        losses.append(t.update(indices, bio.weights(indices) if bio else None).item())
+        if switch and step in switch:
+            bio.set_cohort(switch[step])
+        if bio and step in bio.gates:
+            bio.gate(step, t.stream[step:min(t.ends[epoch], t.release or t.total)])
+        epoch += step == t.ends[epoch]
     if t.wrapped:
         t.optimizer.close()
     return losses, (bio.close() if bio else None)

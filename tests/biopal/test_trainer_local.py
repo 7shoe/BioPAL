@@ -135,9 +135,40 @@ def test_the_trainer_refuses_flags_that_would_misroute_a_brief(train, capsys, fl
     assert message in capsys.readouterr().err and not out.exists()
 
 
-def test_the_trainer_stops_before_training_when_the_local_server_is_not_there(train):
+@pytest.mark.parametrize("flags, steps, release", [([], 75, 50), (["--panel-until", "1"], 53, None)])
+def test_the_trainer_returns_the_held_out_rows_after_the_gates_unless_told_not_to(train, tmp_path, flags, steps,
+                                                                                    release):
     run, out = train
-    with pytest.raises(RuntimeError, match="no model list from http://127.0.0.1:9/v1/models"):
+    plan = tmp_path / "plan.json"
+    plan.write_text(json.dumps(dict(informed=[dict(action="set_cohort", target="gc:low")])))
+    run("--expert-script", str(plan), *flags)
+    result, schedule = json.loads((out / "result.json").read_text()), events(out, "schedule")[0]
+    assert result["steps"] == steps == len((out / "train.jsonl").read_text().splitlines())   # 75: as on all 1200 rows
+    assert result["recipe"]["panel_release"] == release == schedule["panel_release"]
+    assert result["recipe"]["panel"]["F"]["n"] == 840 and schedule["gates"] == [30]          # the trial ends by 38
+    assert json.loads((out / "validation.jsonl").read_text())["step"] == steps               # one epoch, validated once
+    assert len(events(out, "trial")) == 1
+    said = "give no gradient until update 50. After it they are trained on" in (
+        out / "expert" / "gate1_informed_brief.txt").read_text()
+    assert said is bool(release)                                        # the expert is told when the rows return
+
+
+def test_a_run_cut_by_max_steps_counts_its_epochs_and_never_returns_the_rows(train, tmp_path):
+    run, out = train
+    plan = tmp_path / "plan.json"
+    plan.write_text(json.dumps(dict(informed=[dict(action="set_cohort", target="gc:low")])))
+    run("--expert-script", str(plan), "--epochs", "2", "--max-steps", "80", "--decisions", "1")
+    result, schedule = json.loads((out / "result.json").read_text()), events(out, "schedule")[0]
+    rows = [json.loads(line) for line in (out / "train.jsonl").read_text().splitlines()]
+    assert len(rows) == 80 and [r["epoch"] for r in rows] == [1] * 75 + [2] * 5   # 75 updates per epoch of 1200 rows
+    assert result["recipe"]["panel_release"] is None is schedule["panel_release"]  # the return would follow update 90
+    assert schedule["gates"] and len(events(out, "trial")) == len(schedule["gates"])
+
+
+def test_the_trainer_stops_before_training_when_the_local_server_is_not_there(train, capsys):
+    run, out = train
+    with pytest.raises(SystemExit):                                     # a usage error, not a traceback
         run("--expert-backend", "local", "--expert-url", "http://127.0.0.1:9/v1", "--expert-model", "toy-llm",
             "--expert-revision", REVISION, "--expert-timeout", "2")
-    assert not (out / "train.jsonl").exists()                           # no update was run
+    assert "no model list from http://127.0.0.1:9/v1/models" in capsys.readouterr().err
+    assert not out.exists()                                             # nothing loaded, nothing left behind

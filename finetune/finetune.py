@@ -652,6 +652,9 @@ def main():
                 effort=os.environ.get("OPAL_EFFORT", "high"),
                 unavailable_timeout=120,
                 timeout=300,
+                # no shell for the agent, only Read, Edit and Write. OPAL's default "auto" gives a sandboxed shell
+                # where the OS allows one; lambda13 does not (network namespaces are off), and runs must not differ
+                sandbox=False,
             ))
         objective_metric = ("cross-entropy" if classification
                             else "mean-squared error")

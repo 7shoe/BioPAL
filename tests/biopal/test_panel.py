@@ -67,3 +67,35 @@ def test_protein_cohorts_annotation_and_masked_names():
     assert all(k == v for k, v in real.items()) and set(real) == set(masked)
     assert len(set(masked.values())) == len(masked)            # one opaque id per name
     assert not any(k in " ".join(masked.values()) for k in ("gc", "hydro", "charge", "mutation", "protein", "esm"))
+
+
+def test_the_stream_holds_the_panel_out_until_the_release_and_ends_with_equal_visits():
+    f, n, size, epochs = frame(1000), 1000, 16, 3
+    roles = panel.split(f, "y", True, .3, 0)
+    held = set(roles["D"]) | set(roles["A"])
+    batches, release = panel.stream(roles, n, size, epochs, np.random.default_rng(0), .6, 10)
+    total = epochs * -(-n // size)
+    assert len(batches) == total == 189 and release == 120            # as long as a run over all rows; a check
+    assert not held & set(np.concatenate(batches[:release]))           # the panel gives no gradient before
+    assert held <= set(np.concatenate(batches[release:]))              # ... and all of it does after
+    assert (np.bincount(np.concatenate(batches), minlength=n) == epochs).all()   # every row as often as without a panel
+    assert {len(b) for b in batches[:release]} == {size} and {len(b) for b in batches[release:]} == {15, 16}
+    again, _ = panel.stream(roles, n, size, epochs, np.random.default_rng(0), .6, 10)
+    other, _ = panel.stream(roles, n, size, epochs, np.random.default_rng(1), .6, 10)
+    assert all((a == b).all() for a, b in zip(batches, again))         # a function of the seed only
+    assert any(len(a) != len(b) or (a != b).any() for a, b in zip(batches, other))
+
+
+def test_a_late_release_gives_what_is_left_and_a_run_too_short_keeps_the_panel_out():
+    f, n = frame(1000), 1000
+    roles = panel.split(f, "y", True, .3, 0)
+    held = np.concatenate([roles["D"], roles["A"]])
+    batches, release = panel.stream(roles, n, 16, 2, np.random.default_rng(0), .9, 10)   # 126 updates, 6 after 120
+    visits = np.bincount(np.concatenate(batches), minlength=n)
+    assert release == 120 and len(batches) == 126 and visits[held].max() <= 2 and visits[held].sum() <= 6 * 16
+    batches, release = panel.stream(roles, n, 16, 1, np.random.default_rng(0), .95, 50)  # 63 updates: no check left
+    assert release is None and len(batches) == 63 and not set(held) & set(np.concatenate(batches))
+    few = dict(F=np.arange(2, 1000), D=np.arange(1), A=np.arange(1, 2))                  # the smallest panel, returned
+    batches, release = panel.stream(few, n, 16, 1, np.random.default_rng(0), .98, 1)     # in the run's last update
+    assert release == 62 and len(batches) == 63 and min(map(len, batches)) > 0 and {0, 1} <= set(batches[-1])
+
