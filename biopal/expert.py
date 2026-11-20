@@ -13,13 +13,22 @@ private evaluation rows, trial scores, or OPAL's update programs.
 Claude makes one `claude -p` call per proposal using the configured model,
 effort, JSON schema, and remaining budget. Tools, session persistence, and
 retries are disabled. Scripted reads proposals from a JSON file for tests
-and offline runs.
+and offline runs. Local sends one request per proposal to an open-weights
+model served on this machine and may add the task owner's private note to
+the informed brief; nothing it reads is ever sent to another backend.
 """
 
+import hashlib
+import ipaddress
 import json
 import os
+import re
 import subprocess
 import tempfile
+import time
+import urllib.error
+import urllib.parse
+import urllib.request
 from pathlib import Path
 
 from . import ledger, panel
@@ -113,6 +122,73 @@ def brief(c, names, masked):
         "effect of your action on the private loss: \"lower\", \"higher\" or \"no_change\"), hypothesis (one "
         "sentence)."]
     return "\n".join(lines)
+
+
+NOTE_OPEN = "TASK NOTE (from the owner of this task; not part of the measurements)"
+NOTE_CLOSE = "END OF TASK NOTE"
+WITHHELD = "[withheld: the brief carried a private note; the reply is in the run's expert folder]"
+
+
+def load_note(path, task=None):
+    """A task owner's note for the informed local expert, from a text file: header lines, a blank line, the note.
+
+        task: nt_tasks_official_splice_sites_donors
+        label: simulated institutional knowledge
+        visibility: private
+
+        Positives that ... (free text)
+
+    `task` binds the note: with a task given, a note written for another one is refused. `visibility: public`
+    allows the text and the expert's free-text answers in logs and summaries; a private note (the default) leaves
+    this process only inside the request to the local model, and logs carry its hash."""
+    head, _, text = Path(path).read_text().partition("\n\n")
+    fields, text = {}, text.strip()
+    for line in head.splitlines():
+        key, colon, value = line.partition(":")
+        if not colon or key.strip() not in ("task", "label", "visibility") or key.strip() in fields:
+            raise ValueError(f"{path}: a note starts with the header lines task, label and visibility (each "
+                             f"'key: value', once), then a blank line; cannot read {line[:60]!r}")
+        fields[key.strip()] = value.strip()
+    if not fields.get("task") or not text or fields.get("visibility", "private") not in ("private", "public"):
+        raise ValueError(f"{path}: a note needs a 'task: <name>' header, a visibility of private or public if one "
+                         "is given, and text after a blank line")
+    if task is not None and fields["task"] != task:
+        raise ValueError(f"{path} is a note for task {fields['task']!r}, not for {task!r}")
+    return dict(task=fields["task"], label=fields.get("label", ""), public=fields.get("visibility") == "public",
+                text=text, sha256=hashlib.sha256(text.encode()).hexdigest(), chars=len(text))
+
+
+def note_record(note):
+    """What logs and summaries say about a note: its text only if it is public."""
+    return None if note is None else {k: v for k, v in note.items() if k != "text" or note["public"]}
+
+
+def with_note(text, note):
+    """The brief with the note placed after the background line. Everything else stays as it is, byte for byte:
+    measurements, menu and their order are the same with and without the note."""
+    lines = text.split("\n")
+    at = next(i for i, line in enumerate(lines) if line.startswith("Background: ")) + 1
+    return "\n".join(lines[:at] + ["", NOTE_OPEN] + note["text"].splitlines() + [NOTE_CLOSE] + lines[at:])
+
+
+def shown(names, menu, real=False):
+    """{name an expert may answer with: real target} for one gate's menu: the cohort names this expert reads and
+    block_k. `real` also accepts the real names themselves (scripted plans name real cohorts and integer blocks)."""
+    out = {names.get(c, c): c for c in menu.get("set_cohort", [])}
+    out.update({f"block_{k}": k for k in menu.get("set_readout", [])})
+    if real:
+        out.update({target: target for target in list(out.values())})
+    return out
+
+
+def failure(error):
+    """Why a proposal failed, as one word. Unlike the error text it cannot quote the reply, so it is what a log
+    keeps when the brief carried a private note."""
+    if isinstance(error, (TimeoutError, subprocess.TimeoutExpired)) or "timed out" in str(error):
+        return "timeout"
+    if isinstance(error, ValueError):
+        return "off_menu" if str(error).startswith("unavailable action") else "malformed"
+    return "transport" if isinstance(error, OSError) else "backend"
 
 
 def validate(answer):
@@ -237,3 +313,127 @@ class Claude:
         if reply.get("is_error"):
             raise RuntimeError(f"the CLI reported an error: {str(reply.get('result'))[:200]}")
         return extract(reply)
+
+
+LIMIT = 1 << 20   # bytes read from one reply of a local server
+
+
+class NoRedirect(urllib.request.HTTPRedirectHandler):
+    def redirect_request(self, req, fp, code, msg, headers, newurl):
+        raise urllib.error.HTTPError(req.full_url, code, "the local expert's server answered with a redirect; "
+                                     "redirects are not followed", headers, fp)
+
+
+def loopback(url):
+    """The address if it is plain http on a loopback IP literal (127.0.0.0/8 or ::1), else ValueError. A host name,
+    also `localhost`, is refused: what it resolves to is not this module's to decide."""
+    u = urllib.parse.urlsplit(url)
+    try:
+        ok = u.scheme == "http" and ipaddress.ip_address(u.hostname or "").is_loopback and u.port is not None
+    except ValueError:
+        ok = False
+    if not ok or u.username or u.password or u.query or u.fragment:
+        raise ValueError(f"the local expert is reached at http://<loopback IP>:<port>/..., for example "
+                         f"http://127.0.0.1:8000/v1 (no host names, no https, no credentials): {url!r}")
+    return url.rstrip("/")
+
+
+def listeners(port):
+    """User ids of the processes that listen on this TCP port (Linux; None where /proc does not tell)."""
+    found = set()
+    try:
+        for table in ("/proc/net/tcp", "/proc/net/tcp6"):
+            for row in Path(table).read_text().splitlines()[1:]:
+                f = row.split()
+                if f[3] == "0A" and int(f[1].rsplit(":", 1)[1], 16) == port:   # 0A: listening
+                    found.add(int(f[7]))
+    except (OSError, IndexError, ValueError):
+        return None
+    return found
+
+
+class Local:
+    """An open-weights model behind an OpenAI-compatible chat-completions endpoint on this machine (vLLM and
+    others). One request per proposal: a timeout, an HTTP error or a reply that does not follow SCHEMA is an error
+    like any other, the gate keeps the incumbent, and nothing is asked again or asked elsewhere. There is no dollar
+    budget and no ledger entry.
+
+    The brief can hold private measurements and a private note, so the client stays on the host: the address must
+    be a loopback IP literal, proxies from the environment are not used, a redirect is an error, and on a shared
+    machine the server's port must belong to this user (or root). `request` adds or replaces fields of the request
+    body, e.g. {"chat_template_kwargs": {"enable_thinking": false}} for Qwen3 on vLLM; with the defaults below it
+    is recorded as the decoding settings."""
+    scripted = False
+    cost = 0.
+
+    def __init__(self, url, model, revision, timeout, folder, seed=0, request=None):
+        self.url, self.model, self.revision, self.timeout = loopback(url), model, revision, timeout
+        self.folder, self.calls, self.latency = Path(folder), 0, []
+        if {"model", "messages"} & set(request or {}):
+            raise ValueError("the extra request fields cannot replace model or messages")
+        self.decoding = {**dict(temperature=0, top_p=1, seed=seed, max_tokens=512), **(request or {})}
+        self.opener = urllib.request.build_opener(urllib.request.ProxyHandler({}), NoRedirect)
+        self.folder.mkdir(parents=True, exist_ok=True)
+        self.served = self.describe()
+
+    def fetch(self, url, body=None):
+        data = None if body is None else json.dumps(body).encode()
+        request = urllib.request.Request(url, data=data, headers={"Content-Type": "application/json"} if data else {})
+        with self.opener.open(request, timeout=self.timeout) as reply:
+            return reply.read(LIMIT)
+
+    def describe(self):
+        """What is being served, asked once before training starts: a wrong address, another user's server or a
+        different model fails here and not at the first gate."""
+        port, mine = urllib.parse.urlsplit(self.url).port, {os.getuid(), 0}
+        owners = listeners(port)
+        if owners is not None and not owners <= mine:
+            raise RuntimeError(f"port {port} is served by another user of this machine (uid "
+                               f"{sorted(owners - mine)}); the brief is not sent there")
+        try:
+            cards = json.loads(self.fetch(self.url + "/models"))["data"]
+        except (OSError, ValueError, KeyError, TypeError) as e:
+            raise RuntimeError(f"no model list from {self.url}/models ({type(e).__name__}: {e}); is the server up?")
+        card = next((c for c in cards if c.get("id") == self.model), None)
+        if card is None:
+            raise RuntimeError(f"{self.url} does not serve {self.model!r}; it serves {[c.get('id') for c in cards]}")
+        root = str(card.get("root") or "")
+        pinned = re.findall(r"\b[0-9a-f]{40}\b", root)   # a snapshot folder of the Hugging Face cache names its commit
+        if pinned and self.revision not in pinned:
+            raise RuntimeError(f"the server loaded {root}, not revision {self.revision}")
+        try:   # vLLM reports its version next to the API root; other servers may not
+            version = json.loads(self.fetch(f"http://{urllib.parse.urlsplit(self.url).netloc}/version")).get("version")
+        except (OSError, ValueError, AttributeError):
+            version = None
+        return dict(url=self.url, model=self.model, revision=self.revision, revision_in_served_path=bool(pinned),
+                    served_root=root or None, max_model_len=card.get("max_model_len"), owned_by=card.get("owned_by"),
+                    serving_version=version, port_owner_checked=owners is not None)
+
+    def propose(self, role, gate, text):
+        body = dict(model=self.model, messages=[dict(role="system", content=SYSTEM), dict(role="user", content=text)],
+                    response_format=dict(type="json_schema",
+                                         json_schema=dict(name="proposal", schema=SCHEMA, strict=True)))
+        body.update(self.decoding)
+        saved = self.folder / f"gate{gate + 1}_{role}_reply.json"
+        self.calls += 1
+        tick = time.perf_counter()
+        try:
+            raw = self.fetch(self.url + "/chat/completions", body)
+        except urllib.error.HTTPError as e:
+            saved.write_bytes(e.read(LIMIT))
+            raise
+        finally:
+            self.latency.append(time.perf_counter() - tick)
+        saved.write_bytes(raw)
+        try:
+            answer = json.loads(json.loads(raw)["choices"][0]["message"]["content"])
+        except (KeyError, IndexError, TypeError, ValueError):
+            raise ValueError("answer does not follow the schema: the reply's message content is not plain JSON: "
+                             + raw[:200].decode("utf-8", "replace"))
+        return validate(answer)
+
+    def record(self):
+        """Model, revision, serving version, decoding settings, calls and latency, for the run's summary."""
+        t = self.latency
+        return dict(self.served, backend="local", decoding=self.decoding, calls=self.calls,
+                    latency_seconds=dict(mean=sum(t) / len(t), max=max(t), each=[round(x, 3) for x in t]) if t else None)

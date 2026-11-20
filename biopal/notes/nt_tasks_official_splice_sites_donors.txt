@@ -1,0 +1,7 @@
+task: nt_tasks_official_splice_sites_donors
+label: simulated institutional knowledge (author-written from public splicing biology)
+visibility: public
+
+Notes from a splicing group for whoever tunes models on donor-site windows.
+1. Where composition helps and where it does not. In AT-rich parts of the human genome, exons are GC-richer than the long introns around them, so a window with a real donor shows a GC step at the exon-intron boundary. In GC-rich regions introns are short and as GC-rich as the exons: the step is absent, and the only signal left is the donor motif itself (GT at the first two intron bases, inside the MAG|GTRAGT consensus that pairs with U1 snRNA). Models that look good on average usually lean on the composition step and are weakest on GC-rich windows.
+2. What we would do about it. If the measurements show a remaining weakness on the GC-rich third, give those rows more weight: that is where the model has to learn the motif. We would not put more weight on one class label, since both classes are needed to learn the boundary, and we would leave low-complexity windows alone, as they are mostly repeats without usable signal.

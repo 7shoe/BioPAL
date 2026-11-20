@@ -125,11 +125,20 @@ class Outer:
         self.audit = sorted(args.outer_audit) if args.outer_audit is not None else None
         self.horizon = max([args.outer_steps] + (self.audit or []))
         self.roles = [] if args.bio_policy != "expert" else ["informed"] + ["masked"] * (args.expert_shadow == "masked")
-        self.expert = None
-        if self.roles:
-            self.expert = expert.Scripted(args.expert_script) if args.expert_script else expert.Claude(
-                args.expert_model, args.expert_effort, args.expert_budget, args.expert_timeout, args.ledger,
-                t.out / "expert")
+        self.expert, self.note, self.failed = None, None, {role: 0 for role in self.roles}
+        local = bool(self.roles) and args.expert_backend == "local" and not args.expert_script
+        if args.expert_note:                            # the note never enters a hosted call or a scripted run
+            if not local:
+                raise ValueError("a task note is read by a local expert only (--bio-policy expert --expert-backend local)")
+            self.note = expert.load_note(args.expert_note, t.task)
+        if args.expert_script:
+            self.expert = expert.Scripted(args.expert_script)
+        elif local:
+            self.expert = expert.Local(args.expert_url, args.expert_model, args.expert_revision, args.expert_timeout,
+                                       t.out / "expert", args.seed, args.expert_request)
+        elif self.roles:
+            self.expert = expert.Claude(args.expert_model, args.expert_effort, args.expert_budget,
+                                        args.expert_timeout, args.ledger, t.out / "expert")
         self.names = {role: panel.names(self.defs, t.task, t.modality, t.model, masked=role == "masked")
                       for role in self.roles}
         self.gates, dropped = [], []
@@ -138,7 +147,7 @@ class Outer:
                                         self.horizon, t.per_epoch, t.total, args.check_every)
         self.log = (t.out / "outer.jsonl").open("w", buffering=1)
         self.write(event="schedule", opal_decisions=self.decisions, gates=self.gates, dropped_gates=dropped,
-                   trial_updates=self.horizon)
+                   trial_updates=self.horizon, names=self.names, expert=self.about())
         print(f"[biopal] OPAL decisions at updates {self.decisions}; gates after updates {self.gates}"
               + (f" (no room for a {self.horizon}-update trial at {dropped})" if dropped else ""), flush=True)
         if self.gates and t.device != "cpu" and getattr(args, "det", "strict") != "strict":
@@ -282,23 +291,31 @@ class Outer:
             names, masked=role == "masked")
         
         (t.out / "expert").mkdir(exist_ok=True)
-        (t.out / "expert" / f"gate{gate + 1}_{role}_brief.txt").write_text(text)
+        (t.out / "expert" / f"gate{gate + 1}_{role}_brief.txt").write_text(text)   # the brief without the note
         
         scripted = getattr(self.expert, "scripted", False)
-        shown = {names[c]: c for c in menu.get("set_cohort", [])}
-        shown.update({f"block_{k}": k for k in menu.get("set_readout", [])})
-        if scripted:                                    # offline plans name real cohorts and integer blocks
-            shown.update({target: target for target in list(shown.values())})
+        shown = expert.shown(names, menu, real=scripted)   # offline plans name real cohorts and integer blocks
+        note = self.note if role == "informed" else None   # the masked expert reads no note
+        private = note is not None and not note["public"]
 
         try:
-            answer = self.expert.propose(role, gate, text)
+            answer = self.expert.propose(role, gate, expert.with_note(text, note) if note else text)
             action, target = expert.check(answer, menu, shown)
             # the record holds the answer's schema fields and the trainer's own; nothing else a reply carries
             said = {k: answer[k] for k in expert.SCHEMA["properties"] if k in answer}
+            if private:                                 # free text can repeat the note: it stays in the reply file
+                rows, layer = {r["id"] for r in m["table"]}, said.get("layer_evidence")
+                said.update(hypothesis=expert.WITHHELD, evidence_rows=[r for r in said["evidence_rows"] if r in rows],
+                            layer_evidence=layer if layer == "none" or (layer.startswith("block_")
+                                                                        and layer[6:].isdigit()) else expert.WITHHELD)
             force = dict(force=True) if scripted and answer.get("force") is True else {}
             return dict(said, action=action, target=target, ok=True, **force)
-        except Exception as e:
-            return dict(action="keep", target=None, ok=False, error=f"{type(e).__name__}: {e}")
+        except Exception as e:                          # also a deliberate keep is an answer: only this is a failure
+            self.failed[role] += 1
+            kind = expert.failure(e)
+            return dict(action="keep", target=None, ok=False, failure=kind,
+                        error=f"{kind} (the text is withheld: the brief carried a private note)" if private
+                        else f"{type(e).__name__}: {e}")
 
     def gate(self, update, batches):
         """Called after `update` when it is a gate; `batches` are the row indices of the updates that follow in
@@ -323,6 +340,7 @@ class Outer:
                 by.setdefault((p["action"], p["target"]), []).append(role)
         if self.audit:
             options = [("set_cohort", c) for c in menu.get("set_cohort", [])]
+            options += [("ordinary_weighting", None)] * bool(menu.get("ordinary_weighting"))
             options += [("set_readout", k) for k in menu.get("set_readout", [])]
             options += [("refit_head", self.block())] * ("set_readout" in menu)   # the same block, head refitted
             for action in options + [("incumbent_repeat", None)]:
@@ -391,8 +409,8 @@ class Outer:
         self.write(event="decision", gate=i, update=update, adopted=adopt is not None,
                    action=adopt[0] if adopt else "keep", target=adopt[1] if adopt else None,
                    forced=bool(adopt and force), config_after=self.config(),
-                   proposals={role: {k: p.get(k) for k in ("action", "target", "ok", "error", "outcome", "trial",
-                                                           "predicted_sign", "sign_correct")}
+                   proposals={role: {k: p.get(k) for k in ("action", "target", "ok", "failure", "error", "outcome",
+                                                           "trial", "predicted_sign", "sign_correct")}
                               for role, p in proposals.items()},
                    opal_program_changed=changed, opal_calls_in_trial=self.trial_calls,
                    loss_aware_updater=bool(getattr(o, "_step_ctx", False)), next_update=update + 1)
@@ -426,6 +444,20 @@ class Outer:
         self.t.optimizer.log(shown, show_agent=True)
         self.write(event="shown_to_opal", update=update, **shown)
 
+    def about(self):
+        """Which expert answers and how often it failed, for the log and the summary. A local expert adds what is
+        served, its decoding settings and its latency; a private note appears as its hash."""
+        e = self.expert
+        if e is None:
+            return None
+        if isinstance(e, expert.Local):
+            out = e.record()
+        elif getattr(e, "scripted", False):
+            out = dict(backend="scripted")
+        else:
+            out = dict(backend="claude", model=self.args.expert_model, effort=self.args.expert_effort)
+        return dict(out, failures=dict(self.failed), note=expert.note_record(self.note))
+
     def close(self):
         """After OPAL closed: charge its spend to the ledger; returns the summary for result.json."""
         worker = getattr(self.t.optimizer, "worker", None)
@@ -438,4 +470,4 @@ class Outer:
         return dict(opal_decisions=self.decisions, opal_cost_usd=cost, gates=self.gates, adopted=self.adopted,
                     final_config=self.config(), opal_calls_in_trials=self.trial_calls,
                     expert_calls=getattr(self.expert, "calls", 0), expert_cost_usd=getattr(self.expert, "cost", 0.),
-                    bypassed_unchanged=self.idle_ok)
+                    expert=self.about(), bypassed_unchanged=self.idle_ok)
