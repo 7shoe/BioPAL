@@ -127,6 +127,19 @@ conda run -n biopal-v2 python hpo.py \
 Outputs: `trials/trial_NNN/` (finetune runs), `logs/`, `hpo_result.json` (all
 trials, best, and the `finetune.py` command that scores the winner once on test).
 
+## `compare_test.py` — test results side by side
+
+```bash
+python compare_test.py runs/donors_*        # output folders of finetune.py or hpo.py; the first is the reference
+```
+
+One row per run: what trained it, on how many rows, what it spent on Claude, validation loss and the test
+metrics, then the differences to the first run. The notes say which runs ended with identical weights (an agent
+that changed nothing leaves the weights of the run on the same batches), what OPAL's agent and the expert did,
+which rows were held out for a part of the run or for all of it, where runs are not like for like, and which
+have no test score. An HPO study has none until its winner is scored with the
+command `hpo.py` printed. The script reads results only; it never trains or scores.
+
 ## To do
 
 - OPAL with bio features; BiOPAL (agentic wrapper around the bilevel loop)

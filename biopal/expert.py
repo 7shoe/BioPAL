@@ -24,6 +24,7 @@ import json
 import os
 import re
 import subprocess
+import sys
 import tempfile
 import time
 import urllib.error
@@ -77,6 +78,9 @@ def brief(c, names, masked):
         "",
         f"CHECKPOINT after update {c['update']} of {c['total']}",
         f"Configuration: {describe(c['config'], name)}.",
+        *([f"The diagnostic and private rows give no gradient until update {c['release']}. After it they are "
+           "trained on like all other rows: by the last update every row of the training split has had the same "
+           "number of visits."] if c.get("release") else []),
         "",
         "COHORTS (groups of rows)"]
     lines += [f"  {name(k)}: {text.format(f=name(f))}" for k, (f, text) in c["defs"].items()]
@@ -338,14 +342,22 @@ def loopback(url):
     return url.rstrip("/")
 
 
-def listeners(port):
-    """User ids of the processes that listen on this TCP port (Linux; None where /proc does not tell)."""
-    found = set()
+def listeners(port, host, tables=("/proc/net/tcp", "/proc/net/tcp6")):
+    """User ids of the processes that can accept a connection to host:port (Linux; None where /proc does not
+    tell): those listening on that address or on every address. Another user's listener on the same port number
+    of another address (ports are handed out per address) cannot take the connection and does not count."""
+    found, host = set(), ipaddress.ip_address(host)
     try:
-        for table in ("/proc/net/tcp", "/proc/net/tcp6"):
+        for table in tables:
             for row in Path(table).read_text().splitlines()[1:]:
                 f = row.split()
-                if f[3] == "0A" and int(f[1].rsplit(":", 1)[1], 16) == port:   # 0A: listening
+                address, at = f[1].rsplit(":", 1)
+                if f[3] != "0A" or int(at, 16) != port:                         # 0A: listening
+                    continue
+                words = [address[i:i + 8] for i in range(0, len(address), 8)]   # 32-bit words in host byte order
+                ip = ipaddress.ip_address(b"".join(int(w, 16).to_bytes(4, sys.byteorder) for w in words))
+                ip = getattr(ip, "ipv4_mapped", None) or ip
+                if ip.is_unspecified or ip == host:
                     found.add(int(f[7]))
     except (OSError, IndexError, ValueError):
         return None
@@ -373,7 +385,6 @@ class Local:
             raise ValueError("the extra request fields cannot replace model or messages")
         self.decoding = {**dict(temperature=0, top_p=1, seed=seed, max_tokens=512), **(request or {})}
         self.opener = urllib.request.build_opener(urllib.request.ProxyHandler({}), NoRedirect)
-        self.folder.mkdir(parents=True, exist_ok=True)
         self.served = self.describe()
 
     def fetch(self, url, body=None):
@@ -385,8 +396,8 @@ class Local:
     def describe(self):
         """What is being served, asked once before training starts: a wrong address, another user's server or a
         different model fails here and not at the first gate."""
-        port, mine = urllib.parse.urlsplit(self.url).port, {os.getuid(), 0}
-        owners = listeners(port)
+        address, mine = urllib.parse.urlsplit(self.url), {os.getuid(), 0}
+        port, owners = address.port, listeners(address.port, address.hostname)
         if owners is not None and not owners <= mine:
             raise RuntimeError(f"port {port} is served by another user of this machine (uid "
                                f"{sorted(owners - mine)}); the brief is not sent there")
@@ -414,6 +425,7 @@ class Local:
                     response_format=dict(type="json_schema",
                                          json_schema=dict(name="proposal", schema=SCHEMA, strict=True)))
         body.update(self.decoding)
+        self.folder.mkdir(parents=True, exist_ok=True)
         saved = self.folder / f"gate{gate + 1}_{role}_reply.json"
         self.calls += 1
         tick = time.perf_counter()

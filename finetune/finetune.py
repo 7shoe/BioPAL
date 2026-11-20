@@ -167,8 +167,13 @@ def main():
                    help="skip the test evaluation (HPO candidates select on validation only)")
     b = p.add_argument_group("BiOPAL (biopal/)")
     b.add_argument("--panel-frac", type=float,
-                   help="hold this fraction of train out of the gradient, half as diagnostic "
-                        "set D and half as private set A (default 0; 0.15 with --mode biopal)")
+                   help="hold this fraction of train out of the gradient until --panel-until, half as "
+                        "diagnostic set D and half as private set A (default 0; 0.15 with --mode biopal)")
+    b.add_argument("--panel-until", type=float, default=.6,
+                   help="the panel is held out for this share of the run, in which all gates lie. Then "
+                        "its rows join training: the run has as many updates as one without a panel and "
+                        "ends with every train row visited `epochs` times. 1: the panel stays out for "
+                        "the whole run, which is as short as its fit rows (the behaviour before this flag)")
     b.add_argument("--bio-policy", choices=["off", "fixed", "expert"], default="off",
                    help="off: OPAL sees the loss on D. fixed: also the whole-panel baseline and "
                         "generalization gaps. expert: OPAL sees what off shows, and an expert "
@@ -277,9 +282,10 @@ def main():
                 or not isinstance(args.expert_request or {}, dict):
             p.error("--expert-backend local needs --expert-model (the served name) and "
                     "--expert-revision; --expert-request must be a JSON object")
-        try:
-            bio_expert.loopback(args.expert_url)
-        except ValueError as e:
+        try:   # asked now: a server that is not up stops the run before the model loads and before --out exists
+            bio_expert.Local(args.expert_url, args.expert_model, args.expert_revision, args.expert_timeout,
+                             args.out / "expert", args.seed, args.expert_request)
+        except (RuntimeError, ValueError) as e:
             p.error(str(e))
     elif args.expert_note or args.expert_request or args.expert_revision:
         p.error("--expert-note, --expert-request and --expert-revision belong to "
@@ -290,9 +296,9 @@ def main():
         p.error("Invalid --outer-steps, --outer-decisions, --outer-alpha or --outer-audit")
     if args.epochs < 1 or args.batch_size < 1 or args.max_steps < 0 \
             or args.limit < 0 or args.lr <= 0 or args.decisions < 1 \
-            or not 0 <= args.panel_frac < 1:
+            or not 0 <= args.panel_frac < 1 or not 0 < args.panel_until <= 1:
         p.error("Invalid epochs, batch size, max steps, limit, learning rate, decisions, "
-                "or panel fraction")
+                "panel fraction or --panel-until")
     if live and (args.budget is None or args.budget <= 0):
         p.error("Live mode requires an explicit --budget, e.g. --budget 5")
     if live and args.max_steps:
@@ -557,8 +563,27 @@ def main():
 
     # -------------------------------------------------------------- optimizer
     trainable = [v for v in net.parameters() if v.requires_grad]
-    full_steps = args.epochs * math.ceil(len(fit) / args.batch_size)
+    # The train rows of every update are fixed here, from a generator of their own; `ends` are the
+    # updates after which an epoch is validated. With a panel that returns (--panel-until below 1) the
+    # run is as long as one over all train rows: see biopal.panel.stream.
+    order_rng, release = np.random.default_rng(args.seed), None
+    if roles is not None and args.panel_until < 1:
+        stream, release = bio_panel.stream(roles, len(frames["train"]), args.batch_size, args.epochs,
+                                           order_rng, args.panel_until, args.check_every)
+        per_epoch = math.ceil(len(frames["train"]) / args.batch_size)
+        ends = [per_epoch * e for e in range(1, args.epochs + 1)]
+        print(f"Panel: held out for updates 1 to {release} of {len(stream)}, then trained on" if release else
+              "Panel: no update is left to return the held-out rows in; they stay out", flush=True)
+    else:
+        per_epoch, stream, ends = math.ceil(len(fit) / args.batch_size), [], []
+        for _ in range(args.epochs):
+            order = fit[order_rng.permutation(len(fit))]
+            stream += [order[s:s + args.batch_size] for s in range(0, len(order), args.batch_size)]
+            ends.append(len(stream))
+    full_steps = len(stream)
     total_steps = min(args.max_steps, full_steps) if args.max_steps else full_steps
+    if release and release >= total_steps:  # --max-steps ends the run before the rows return
+        release = None
     groups = [dict(params=[v for v in trainable if v.ndim > 1],
                    weight_decay=args.weight_decay),
               dict(params=[v for v in trainable if v.ndim <= 1], weight_decay=0.)]
@@ -592,7 +617,8 @@ def main():
                   spaced_input=spaced, pad_multiple=pad_multiple,
                   hidden_size=hidden_size)
     if roles is not None:
-        recipe.update(panel_frac=args.panel_frac, panel=bio_panel.manifest(roles))
+        recipe.update(panel_frac=args.panel_frac, panel=bio_panel.manifest(roles),
+                      panel_until=args.panel_until, panel_release=release)
     # unchanged for tasks with no removed rows, so their earlier runs stay comparable
     data_hash = hashlib.sha256(parquet.read_bytes() + "\n".join(removed).encode()).hexdigest()
     versions = {}
@@ -639,7 +665,12 @@ def main():
                  f"{entry['modality']} task {args.task} ({args.objective}); "
                  f"judged by held-out test {objective_metric} of the checkpoint "
                  f"selected by lowest end-of-epoch validation {objective_metric}. "
-                 "Validation and test metrics are not provided to the agent.",
+                 "Validation and test metrics are not provided to the agent."
+                 + (f" Updates 1 to {release} train on {len(fit)} of the {len(frames['train'])} train "
+                    "rows; the others are held out for measurements (panel_loss is their loss, "
+                    f"reported until then). After update {release} they are trained on too, and by "
+                    "the last update every train row has had the same number of visits."
+                    if use_bio and release else ""),
             backend="keep" if args.mode == "keep" else "claude",
             blocking=True, summarize=False, run_dir=str(args.out / "opal"),
             **plan, **extra)
@@ -676,14 +707,13 @@ def main():
             y=(frames["train"][label].to_numpy() if classification else
                (frames["train"][label].to_numpy(dtype=np.float64) - y_mean) / y_std),
             num_out=num_out, modality=entry["modality"], task=args.task, model=args.model,
-            device=device, per_epoch=math.ceil(len(fit) / args.batch_size),
-            total=total_steps, blocks=blocks, out=args.out))
+            device=device, per_epoch=per_epoch, total=total_steps, release=release,
+            blocks=blocks, out=args.out))
 
     # ------------------------------------------------------------------ train
-    # Reset after wrapping; use an independent RNG for batch permutations.
+    # Reset after wrapping; the batches were drawn above from an independent RNG.
     seed_all()
-    order_rng = np.random.default_rng(args.seed)
-    step, best_epoch, best_val = 0, None, None
+    step, epoch, best_epoch, best_val = 0, 1, None, None
     training_seconds = 0.0
     started = time.perf_counter()
     print(f"model={args.model} task={args.task} objective={args.objective} "
@@ -691,42 +721,39 @@ def main():
     try:
         with (args.out / "train.jsonl").open("w", buffering=1) as train_log, \
              (args.out / "validation.jsonl").open("w", buffering=1) as val_log:
-            for epoch in range(1, args.epochs + 1):
-                net.train()
-                if args.freeze_backbone:
-                    model.eval()  # stable features: no dropout in the backbone
-                order = fit[order_rng.permutation(len(fit))]
-                for start in range(0, len(order), args.batch_size):
-                    if device != "cpu":
-                        torch.cuda.synchronize()
-                    indices = order[start:start + args.batch_size]
-                    if bio:
-                        bio.before(step + 1)
-                    tick = time.perf_counter()
-                    loss = update(indices, bio.weights(indices) if bio else None)
-                    if device != "cpu":
-                        torch.cuda.synchronize()
-                    training_seconds += time.perf_counter() - tick
-                    step += 1
-                    row = dict(step=step, epoch=epoch, loss=loss.item())
-                    train_log.write(json.dumps(row) + "\n")
-                    if step == 1 or step % 25 == 0 or step == total_steps:
-                        print(f"epoch={epoch} step={step}/{total_steps} "
-                              f"loss={loss.item():.6f}", flush=True)
-                    if bio and step in bio.gates:  # trial on the next updates, then go on
-                        bio.gate(step, [order[s:s + args.batch_size] for s in range(
-                            start + args.batch_size, len(order), args.batch_size)])
-                    if step >= total_steps:
-                        break
-                if not args.max_steps:
-                    metrics = evaluate("val")
-                    val_log.write(json.dumps(dict(epoch=epoch, step=step, **metrics)) + "\n")
-                    print("Validation:", json.dumps(metrics), flush=True)
-                    if best_val is None or metrics["loss"] < best_val["loss"]:
-                        best_val, best_epoch = metrics, epoch
-                        torch.save(net.state_dict(), args.out / "best.pt")
-                if step >= total_steps:
-                    break
+            net.train()
+            if args.freeze_backbone:
+                model.eval()  # stable features: no dropout in the backbone
+            for step, indices in enumerate(stream[:total_steps], 1):
+                if device != "cpu":
+                    torch.cuda.synchronize()
+                if bio:
+                    bio.before(step)
+                tick = time.perf_counter()
+                loss = update(indices, bio.weights(indices) if bio else None)
+                if device != "cpu":
+                    torch.cuda.synchronize()
+                training_seconds += time.perf_counter() - tick
+                row = dict(step=step, epoch=epoch, loss=loss.item())
+                train_log.write(json.dumps(row) + "\n")
+                if step == 1 or step % 25 == 0 or step == total_steps:
+                    print(f"epoch={epoch} step={step}/{total_steps} "
+                          f"loss={loss.item():.6f}", flush=True)
+                if bio and step in bio.gates:  # trial on the next updates of the epoch, then go on;
+                    # with a panel that returns, only on updates that still hold it out
+                    bio.gate(step, stream[step:min(ends[epoch - 1], release or full_steps)])
+                if step == ends[epoch - 1]:
+                    if not args.max_steps:
+                        metrics = evaluate("val")
+                        val_log.write(json.dumps(dict(epoch=epoch, step=step, **metrics)) + "\n")
+                        print("Validation:", json.dumps(metrics), flush=True)
+                        if best_val is None or metrics["loss"] < best_val["loss"]:
+                            best_val, best_epoch = metrics, epoch
+                            torch.save(net.state_dict(), args.out / "best.pt")
+                    epoch += 1
+                    net.train()
+                    if args.freeze_backbone:
+                        model.eval()
     finally:
         if wrapped:
             optimizer.close()

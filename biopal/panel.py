@@ -1,11 +1,13 @@
 """BiOPAL data roles and cohorts
 
 split()        train rows -> fit F (all gradients), diagnostic D (measurements), private A (trial scoring)
+stream()       the train rows of every update when D and A return to training after the gates
 composition()  features of the simple baseline model
 cohorts()      named row groups: sequence-composition thirds, task annotations, label groups
 names()        what the expert reads for each name: the real one (informed) or an opaque id (masked)
 """
 import hashlib
+import math
 
 import numpy as np
 
@@ -44,6 +46,35 @@ def split(frame, label, classification, frac, seed):
         k = int(round(len(g) * frac / 2))
         role[g[:k]], role[g[k:2 * k]] = 1, 2
     return {name: np.flatnonzero(role[group] == i) for i, name in enumerate("FDA")}
+
+
+def stream(roles, n, batch_size, epochs, rng, until, every):
+    """Train rows of every update when D and A return to training during the run: -> (batches, release).
+
+    The run has as many updates as one without a panel, epochs * ceil(n / batch_size). Updates 1..release are full
+    batches from back-to-back passes over F, each pass in a fresh order. release is `until` of the run moved up to
+    a multiple of `every` (OPAL's check interval): it depends on nothing a gate does, so every arm of a comparison
+    gets the same batches. After it each row is visited as often as it still lacks to `epochs` visits (D and A
+    rows `epochs` times, F rows the rest of theirs), in one shuffled order, in batches of equal size. At the end
+    every train row was visited `epochs` times, as without a panel. That needs until <= len(F) / n: held out
+    for longer, F rows pass `epochs` visits before the release and the others get what is left of the run.
+    Rarely a batch holds a row twice (where two passes meet, or two late visits of one row); it then counts twice.
+    release is None, and all updates pass over F, when no update is left to return the rows in."""
+    total, fit = epochs * math.ceil(n / batch_size), roles["F"]
+    release = min(math.ceil(until * total / every) * every, total)
+
+    def passes(updates):
+        rows = np.concatenate([fit[rng.permutation(len(fit))]
+                               for _ in range(math.ceil(updates * batch_size / len(fit)))])
+        return [rows[s:s + batch_size] for s in range(0, updates * batch_size, batch_size)]
+
+    before = passes(release)
+    if release == total:
+        return before, None
+    # the rows of D and A alone are owed more visits than updates are left: no batch below is empty
+    owed = np.repeat(np.arange(n), np.clip(epochs - np.bincount(np.concatenate(before), minlength=n), 0, None))
+    owed = owed[rng.permutation(len(owed))][:(total - release) * batch_size]
+    return before + np.array_split(owed, total - release), release
 
 
 def manifest(roles):

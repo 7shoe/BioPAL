@@ -40,25 +40,27 @@ class Readout(torch.nn.Module):
         return (pooled - self.mu) * self.scale
 
 
-def spaced(total, n, every, lo=.15, hi=.85):
+def spaced(total, n, every, lo=.15, hi=.85, last=None):
     """n update numbers spread evenly over [lo, hi] of the run, each moved up to the next check (a multiple of
-    `every`) but not into the last `every` updates; fewer when the run is too short to hold n distinct ones."""
-    at = np.linspace(lo * total, hi * total, n) if n > 1 else [total / 2]
-    last = (total - every) // every * every
+    `every`) but not past `last` (default: not into the last `every` updates); fewer when the run is too short to
+    hold n distinct ones."""
+    at = np.linspace(lo * total, hi * total, n) if n > 1 else [(lo + hi) / 2 * total]
+    last = (total - every) // every * every if last is None else last
     return sorted({u for u in (min(math.ceil(a / every) * every, last) for a in at) if u >= every})
 
 
-def place(gates, decisions, horizon, per_epoch, total, every):
+def place(gates, decisions, horizon, per_epoch, total, every, release=None):
     """Return placed and dropped gates. Each gate opens after the preceding replay finishes. Its next
     `horizon` updates must fit in the epoch and contain no OPAL decision. A decision at the gate runs first.
-    The final training update must run outside a trial because OPAL closes there."""
+    The final training update must run outside a trial because OPAL closes there. With `release` (the last
+    update that trains on F only) the trial ends by it: no branch trains on the rows it is scored on."""
     placed, dropped = [], []
     for gate in gates:
         for u in range(gate, total - horizon, every):
             if placed and u < placed[-1] + horizon:
                 continue
             epoch_end = math.ceil(u / per_epoch) * per_epoch
-            if u % per_epoch and u + horizon <= epoch_end \
+            if u % per_epoch and u + horizon <= epoch_end and (release is None or u + horizon <= release) \
                     and not any(u < d <= u + horizon for d in decisions):
                 placed.append(u)
                 break
@@ -100,7 +102,8 @@ class Outer:
     """The outer level of one run. `t` holds the trainer's objects and functions (finetune.py builds it):
     net, optimizer, scheduler, update(indices, weights), rows(indices, layers), frame (the train rows), label,
     y (labels, or standardized targets), roles (F, D, A), classification, num_out, modality, task, model, device,
-    per_epoch, total, blocks, out."""
+    per_epoch (updates between two validations), total, release (the last update that trains on F only, after
+    which D and A join training; None or absent: they never do), blocks, out."""
 
     def __init__(self, args, t):
         self.args, self.t = args, t
@@ -142,14 +145,22 @@ class Outer:
         self.names = {role: panel.names(self.defs, t.task, t.modality, t.model, masked=role == "masked")
                       for role in self.roles}
         self.gates, dropped = [], []
+        self.release = getattr(t, "release", None)      # the last update on F only; after it D and A are trained on
         if self.roles or self.audit:
-            self.gates, dropped = place(spaced(t.total, args.outer_decisions, args.check_every), self.decisions,
-                                        self.horizon, t.per_epoch, t.total, args.check_every)
+            window = {}
+            if self.release:                            # the gates fill the time the rows are held out
+                top = self.release - self.horizon
+                window = dict(hi=max(top / t.total, .15), last=top // args.check_every * args.check_every)
+            self.gates, dropped = place(spaced(t.total, args.outer_decisions, args.check_every, **window),
+                                        self.decisions, self.horizon, t.per_epoch, t.total, args.check_every,
+                                        self.release)
         self.log = (t.out / "outer.jsonl").open("w", buffering=1)
         self.write(event="schedule", opal_decisions=self.decisions, gates=self.gates, dropped_gates=dropped,
-                   trial_updates=self.horizon, names=self.names, expert=self.about())
+                   trial_updates=self.horizon, panel_release=self.release, names=self.names, expert=self.about())
         print(f"[biopal] OPAL decisions at updates {self.decisions}; gates after updates {self.gates}"
-              + (f" (no room for a {self.horizon}-update trial at {dropped})" if dropped else ""), flush=True)
+              + (f" (no room for a {self.horizon}-update trial at {dropped})" if dropped else "")
+              + (f"; the held-out rows join training after update {self.release}" if self.release else ""),
+              flush=True)
         if self.gates and t.device != "cpu" and getattr(args, "det", "strict") != "strict":
             print("[biopal] without --det strict a trial may not repeat bit for bit on the GPU (seen on ESM2, whose "
                   "attention kernel is then not deterministic); the committed updates can drift from the scored branch",
@@ -287,8 +298,8 @@ class Outer:
             task=t.task, modality=t.modality, model=t.model, blocks=t.blocks or "an unknown number of",
             objective="classification" if t.classification else "regression", defs=self.defs, update=update,
             total=t.total, config=self.config(), table=m["table"], menu=menu, k=self.args.outer_steps,
-            alpha=self.args.outer_alpha, history=[h for h in self.history if h["role"] == role]),
-            names, masked=role == "masked")
+            alpha=self.args.outer_alpha, history=[h for h in self.history if h["role"] == role],
+            release=self.release), names, masked=role == "masked")
         
         (t.out / "expert").mkdir(exist_ok=True)
         (t.out / "expert" / f"gate{gate + 1}_{role}_brief.txt").write_text(text)   # the brief without the note
@@ -430,18 +441,22 @@ class Outer:
 
     def before(self, update):
         """Called before every update. When an OPAL decision is due at this update, show OPAL the loss on D and
-        the readout block (and, with --bio-policy fixed, the two whole-panel gaps)."""
+        the readout block (and, with --bio-policy fixed, the two whole-panel gaps). After the held-out rows
+        joined training only the readout block is left to show."""
         
         if update not in self.decisions:
             return
-        loss_d = self.t.rows(self.s.D)[0]
-        shown = dict(panel_loss=float(loss_d.mean()))
+        shown, held_out = {}, not self.release or update - 1 <= self.release
+        if held_out:                                    # once D is trained on, there is no held-out loss to show
+            loss_d = self.t.rows(self.s.D)[0]
+            shown = dict(panel_loss=float(loss_d.mean()))
         if self.t.blocks:
             shown["readout_block"] = self.block()
-        if self.args.bio_policy == "fixed":
+        if self.args.bio_policy == "fixed" and held_out:
             shown.update(baseline_gap=float((loss_d - self.s.base).mean()),
                          generalization_gap=float(loss_d.mean() - self.t.rows(self.s.F)[0].mean()))
-        self.t.optimizer.log(shown, show_agent=True)
+        if shown:
+            self.t.optimizer.log(shown, show_agent=True)
         self.write(event="shown_to_opal", update=update, **shown)
 
     def about(self):

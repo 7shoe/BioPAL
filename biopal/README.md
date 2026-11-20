@@ -9,7 +9,7 @@ whether the change is adopted. Everything runs through `finetune/finetune.py`.
 
 | File | Job |
 | --- | --- |
-| `panel.py` | split train into fit F, diagnostic D and private A; cohorts; names shown to the expert |
+| `panel.py` | split train into fit F, diagnostic D and private A; the batches of a run in which D and A return to training; cohorts; names shown to the expert |
 | `measure.py` | baseline, generalization and layer gaps per cohort, with 95% intervals; the layer probes |
 | `outer.py` | gate schedule, snapshot and rewind, the two actions, the trial, the adoption rule, `outer.jsonl` |
 | `expert.py` | the brief, answer checks; the Claude call and its budget, the local model call and its note, scripted answers |
@@ -19,7 +19,8 @@ whether the change is adopted. Everything runs through `finetune/finetune.py`.
 
 ## Training Modes
 
-All modes of a comparison share `--panel-frac 0.15` and the seed, so they train on the same 85% of train.
+All modes of a comparison share `--panel-frac 0.15`, `--panel-until` and the seed, so they train on the same
+rows in the same batches.
 
 | Mode | Flags |
 | --- | --- |
@@ -30,6 +31,40 @@ All modes of a comparison share `--panel-frac 0.15` and the seed, so they train 
 
 `--mode keep` in place of `--mode biopal` wraps the optimizer in OPAL without an agent: no OPAL cost, same
 schedule, same gates. With `--expert-script FILE` or `--outer-audit` it makes no Claude call at all.
+
+### The held-out rows return to training
+
+The gates need rows that give no gradient: D for the measurements, A to score a trial. They are needed only
+while gates are open. With `--panel-until 0.6` (the default) a run with a panel has as many updates as one
+without, `epochs * ceil(train rows / batch size)`, in three parts:
+
+1. Updates 1 to R train on F only. R is 60% of the run, moved up to an OPAL check; it depends on nothing a gate
+   does. All gates and their trials lie here: the last trial ends by update R.
+2. After update R every row is visited as often as it still lacks to `epochs` visits: D and A rows `epochs`
+   times, F rows the rest of theirs, in one shuffled order.
+3. At the last update every train row has had `epochs` visits, as in a run without a panel.
+
+Both agents are told: the expert's brief and OPAL's goal name update R. OPAL's decisions stay spread over 15 to
+85% of the run; at a decision after R it is shown no held-out loss, since none is left. `--mode plain
+--panel-frac 0.15` gets the same batches without OPAL or gates and is the matched baseline. `--panel-until 1`
+keeps the panel out to the end, with gates up to 85% of a run that is as short as F: the behaviour before
+this flag, bit for bit.
+
+Measured without any agent (`--mode plain`, ntv2_50m on `nt_tasks_official_splice_sites_donors`, 2 epochs,
+`--det strict`, 2,957 test rows), test loss and accuracy of the checkpoint validation selected:
+
+| Seed | no panel | `--panel-frac 0.15 --panel-until 1` | `--panel-frac 0.15` (returns at update 1550 of 2508) |
+|---|---|---|---|
+| 42 | 0.1016, 0.9726 | 0.1255, 0.9692 | 0.1112, 0.9679 |
+| 43 | 0.0969, 0.9770 | 0.1523, 0.9608 | 0.1020, 0.9729 |
+| 44 | 0.0891, 0.9770 | 0.1539, 0.9574 | 0.1149, 0.9702 |
+| mean | 0.0958, 0.9755 | 0.1439, 0.9625 | 0.1094, 0.9704 |
+
+Returning the rows closed 72% of the loss gap and 60% of the accuracy gap to training without a panel; it stayed
+behind on all three seeds (+0.014 loss, −0.005 accuracy on average; the sampling of test rows alone puts a
+standard error of 0.003 on one accuracy). On seed 42 validation selected the epoch-1 checkpoint, saved at
+update 1254, before the return: that score is of a model that never trained on the returned rows. With
+`--mode keep` and an expert that keeps, the run ends with the weights of the plain run on the same batches.
 
 ## Smoke runs (costs: ¢)
 Experiments can grow costly. As of November 2026, the most cost-efficient (and fastest) choice is `claude-haiku-5-5`.
@@ -97,11 +132,12 @@ note than without it? A comparison with Claude on the public brief is possible b
 size with everything else.
 
 ```bash
-# 0. serve the model: any env with vLLM, weights already on disk, pinned by their commit
+# 0. serve the model, in a terminal of its own (it stays in the foreground): any env with vLLM, weights
+#    already on disk, pinned by their commit. Set REV in the other terminal too.
 REV=b968826d9c46dd6066d109eabc6255188de91218
-CUDA_VISIBLE_DEVICES=0 HF_HUB_OFFLINE=1 VLLM_NO_USAGE_STATS=1 DO_NOT_TRACK=1 vllm serve \
-  <hf cache>/models--Qwen--Qwen3-8B/snapshots/$REV --served-model-name Qwen/Qwen3-8B \
-  --host 127.0.0.1 --port 8000 --max-model-len 8192 --dtype bfloat16 --seed 0
+QWEN=/path/to/models--Qwen--Qwen3-8B/snapshots/$REV     # set this: the snapshot folder in a Hugging Face cache
+CUDA_VISIBLE_DEVICES=0 HF_HUB_OFFLINE=1 VLLM_NO_USAGE_STATS=1 DO_NOT_TRACK=1 vllm serve "$QWEN" \
+  --served-model-name Qwen/Qwen3-8B --host 127.0.0.1 --port 8000 --max-model-len 8192 --dtype bfloat16 --seed 0
 #    on a GPU that other jobs use, add: --gpu-memory-utilization 0.25 --kv-cache-memory-bytes 2G --max-num-seqs 4
 Q='{"chat_template_kwargs": {"enable_thinking": false}}'     # Qwen3 on vLLM: answer without a thinking block
 NOTE=../biopal/notes/nt_tasks_official_splice_sites_donors.txt
@@ -126,7 +162,8 @@ python finetune.py --model ntv2_50m --task nt_tasks_official_splice_sites_donors
 ```
 
 Step 3 with `--mode biopal --budget ...` in place of `--mode keep` is the full method: OPAL's agent inside, the
-local expert outside. `--expert-url` (default `http://127.0.0.1:8000/v1`) names another port.
+local expert outside (run once at this size with `claude-haiku-5-5` as OPAL's agent: $0.010 for OPAL, nothing
+for the expert). `--expert-url` (default `http://127.0.0.1:8000/v1`) names another port.
 
 **The note** is a text file: header lines, a blank line, the text.
 
@@ -154,7 +191,8 @@ served by you or by root. There is one request per proposal. A timeout, an HTTP 
 plain JSON under the schema, or a target the role was not shown counts as a failure (`failure` in the log:
 `timeout`, `transport`, `malformed`, `off_menu`), keeps the incumbent, and is not asked again or elsewhere; a
 chosen `keep` is logged as `ok` with outcome `kept`. A local call needs no budget and writes no ledger line. The
-server is asked once before training for its model list and version, so a wrong port stops the run at the start.
+server is asked for its model list and version while the flags are checked, so a wrong port or a server that
+is not up yet stops the run with one line, before the model loads and before `--out` exists.
 `--expert-revision` is recorded, and checked when the server's model path names a commit (a Hugging Face snapshot
 folder does). `result.json` then holds model, revision, vLLM version, decoding settings, calls, failures and
 latency per call under `biopal.expert`.
@@ -183,7 +221,9 @@ note does for a trained model takes matched live runs with adoption on and a tes
 **First run** (2026-11-19: ntv2_50m on `nt_tasks_official_splice_sites_donors`, one audit run; Qwen/Qwen3-8B at
 `b968826d` on vLLM 0.11.0, temperature 0, thinking off). The audit placed 5 gates (after updates 350, 700, 1100,
 1450, 1850; none dropped). All 11 legal actions were scored at every gate and horizon, and the incumbent repeat
-reproduced the incumbent exactly. Mean loss difference against keep after 64 updates:
+reproduced the incumbent exactly. These runs held the panel out to the end; add `--panel-until 1` to steps 1 and
+3 to repeat them (the default now places the gates in the first 60% of a longer run). Mean loss difference
+against keep after 64 updates:
 
 | Proposer | mean_d | Choices at the 5 gates |
 |---|---|---|
@@ -211,7 +251,8 @@ the audit started; its author had seen aggregate results of an earlier audit of 
 
 ## What a run writes
 
-- `outer.jsonl`: one line per event. `schedule` (OPAL decisions and gates as placed), `shown_to_opal` (what OPAL
+- `outer.jsonl`: one line per event. `schedule` (OPAL decisions and gates as placed, and `panel_release`, the
+  last update before D and A are trained on), `shown_to_opal` (what OPAL
   was shown before each decision), and per gate `table` (the measurements and the actions on offer), `proposals`
   (written and synced before the private set is read), `trial` (per branch: training losses and, per horizon,
   the mean loss difference on A, its standard error and whether it passes; for a readout branch also
@@ -224,11 +265,12 @@ the audit started; its author had seen aggregate results of an earlier audit of 
 - `result.json`, key `biopal`: adopted changes, final configuration, Claude spend by role, OPAL agent calls inside
   trial branches (must be 0), and the readout block `best.pt` was saved with.
 - `config.json`, `recipe.panel`: sizes and hashes of F, D and A. Equal hashes mean equal rows across modes.
+  `recipe.panel_until` and `recipe.panel_release` say when the held-out rows returned (`null`: never).
 
 ## Tests
 
 ```bash
-# CPU-only, no Claude call, no model server (a fake one on a loopback port); 125 tests, ~1.5 min
+# CPU-only, no Claude call, no model server (a fake one on a loopback port); 133 tests, ~1.5 min
 conda run -n biopal-v2 python -m pytest tests/biopal -q
 ```
 
@@ -247,6 +289,11 @@ conda run -n biopal-v2 python -m pytest tests/biopal -q
   if a later version changes that.
 - After a readout switch the optimizer keeps its statistics from before the switch.
 - `A` is read at every gate, so it becomes tuning data over a run. Validation and test are never touched by a gate.
+- The returned rows get their visits late, at a low learning rate (2 epochs, `--panel-until 0.6`: on average
+  15% of the peak rate), and are over a third of every batch then. No gate can open after the return, and OPAL's
+  later decisions come without a held-out loss.
+- Checkpoints are saved at the end of an epoch. One saved before the return (2 epochs: the first, at 50% of
+  the run) can win on validation; the test score is then of a model that saw F only.
 - The adoption rule's standard error counts only the sampling of rows in A, not how much a short training
   window varies from one run to the next. In the full-data audits (`--outer-audit 16 32 64 128`, keep backend) 25
   to 60% of all cohort options passed at any one horizon, the sign of the difference often flipped between
