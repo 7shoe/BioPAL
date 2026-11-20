@@ -23,7 +23,8 @@ checkpoint (and after closing OPAL). Agent feedback is training-only.
 Modes: plain AdamW, OPAL keep (wrapped, no interventions - parity target),
 opal (live Claude; requires --budget), or biopal (live OPAL as the inner level
 of BiOPAL; see biopal/__init__.py. --mode keep with --panel-frac is its offline
-twin). --max-steps is a diagnostic run (no
+twin; --expert-backend local puts a locally served open-weights model in the
+expert's seat). --max-steps is a diagnostic run (no
 validation/checkpoint/test; plain/keep only). --limit subsamples each split
 for pipeline smoke tests. --compare checks two run dirs for exact parity.
 best.pt holds backbone+head weights, not an optimizer/resume checkpoint.
@@ -189,10 +190,26 @@ def main():
                         "same checkpoint; its proposal is scored, never adopted")
     b.add_argument("--expert-script", type=Path,
                    help="JSON file of scripted proposals instead of Claude calls")
-    b.add_argument("--expert-model", default="claude-haiku-5-5")
+    b.add_argument("--expert-backend", choices=["claude", "local"], default="claude",
+                   help="who answers at a gate: Claude (hosted; needs --expert-budget) or an "
+                        "open-weights model served on this machine (no budget, no hosted fallback)")
+    b.add_argument("--expert-model",
+                   help="Claude model (default claude-haiku-5-5), or the name the local server "
+                        "serves the model under")
     b.add_argument("--expert-effort", default="low")
     b.add_argument("--expert-budget", type=float,
-                   help="USD cap on the expert's Claude calls (required for a live expert)")
+                   help="USD cap on the expert's Claude calls (required for a live Claude expert)")
+    b.add_argument("--expert-url", default="http://127.0.0.1:8000/v1",
+                   help="local expert: OpenAI-compatible API root on a loopback IP address")
+    b.add_argument("--expert-revision",
+                   help="local expert: revision (commit) of the served weights, for the record; "
+                        "checked against the server's model path when that names one")
+    b.add_argument("--expert-request", type=json.loads, metavar="JSON",
+                   help="local expert: extra fields of the request body, e.g. "
+                        '\'{"chat_template_kwargs": {"enable_thinking": false}}\' for Qwen3 on vLLM')
+    b.add_argument("--expert-note", type=Path,
+                   help="local expert: file with the task owner's note (see biopal/README.md); "
+                        "only the informed local expert reads it")
     b.add_argument("--expert-timeout", type=float, default=120., help="seconds per expert call")
     b.add_argument("--check-every", type=int, default=50,
                    help="OPAL's check interval in updates; BiOPAL schedules fall on checks")
@@ -245,10 +262,29 @@ def main():
         args.outer_audit = [16, 32, 64, 128]
     if (args.mode == "biopal" or args.bio_policy != "off" or args.outer_audit) and not use_bio:
         p.error("BiOPAL needs --panel-frac > 0 and --mode biopal (or keep, its offline twin)")
+    local = args.expert_backend == "local"
     if args.bio_policy == "expert" and (args.outer == "off" or not (
-            args.expert_script or (args.expert_budget or 0) > 0)):
-        p.error("--bio-policy expert needs --outer and either --expert-budget (live Claude "
-                "calls) or --expert-script")
+            args.expert_script or local or (args.expert_budget or 0) > 0)):
+        p.error("--bio-policy expert needs --outer and one of --expert-budget (live Claude "
+                "calls), --expert-backend local, or --expert-script")
+    if local:
+        sys.path.append(str(REPO))
+        from biopal import expert as bio_expert
+        if args.bio_policy != "expert" or args.expert_script or args.expert_budget is not None:
+            p.error("--expert-backend local goes with --bio-policy expert, without "
+                    "--expert-script and without --expert-budget (a local call costs nothing)")
+        if not args.expert_model or not args.expert_revision \
+                or not isinstance(args.expert_request or {}, dict):
+            p.error("--expert-backend local needs --expert-model (the served name) and "
+                    "--expert-revision; --expert-request must be a JSON object")
+        try:
+            bio_expert.loopback(args.expert_url)
+        except ValueError as e:
+            p.error(str(e))
+    elif args.expert_note or args.expert_request or args.expert_revision:
+        p.error("--expert-note, --expert-request and --expert-revision belong to "
+                "--expert-backend local; a note is never sent to a hosted expert")
+    args.expert_model = args.expert_model or "claude-haiku-5-5"
     if args.outer_steps < 1 or args.outer_decisions < 1 or not 0 < args.outer_alpha < 1 \
             or min(args.outer_audit or [1]) < 1:
         p.error("Invalid --outer-steps, --outer-decisions, --outer-alpha or --outer-audit")
