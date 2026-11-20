@@ -1,0 +1,7 @@
+task: proteingym_gfp_fluorescence
+label: simulated institutional knowledge (author-written from public protein-engineering literature)
+visibility: public
+
+Notes from a protein-engineering group for whoever tunes models on the GFP mutational scan.
+1. What the landscape looks like. Brightness is close to all-or-nothing: a variant is about as bright as wild type or it is dark, with hardly anything in between. The barrel tolerates a few substitutions and then gives way: about one in ten variants with 1 or 2 substitutions is dark, one in three with 3 or 4, and four in five with 5 or more. A single substitution can also end fluorescence when it hits the chromophore (S65, Y66, G67), a residue that helps it form (R96, E222), or a buried position facing it. Surface positions matter little alone and add up. All variants are the same 238 residues but for a few, so mean hydropathy and net charge barely differ between them: those thirds are close to arbitrary splits.
+2. What we would do about it. If the measurements show a remaining weakness at 3 or 4 substitutions, give those rows more weight: that is where the outcome is undecided and the model has to learn which combinations cross the threshold. Variants with 5 or more are mostly dark and need no help. We would not act on the hydropathy or charge thirds. More weight on the bright or the dark third of the target changes what the squared error rewards, and we would avoid it.

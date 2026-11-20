@@ -29,6 +29,22 @@ ABOUT = dict(   # shown to the informed expert only
     proteingym_gfp_fluorescence=(
         "ProteinGym deep mutational scan of Aequorea victoria GFP (238 residues). Every sequence is a variant "
         "with one or more substitutions; the target is its fluorescence brightness."),
+    fish_gue_ctcf=(
+        "Fish_GUE benchmark. 800-nt genomic windows from fish genomes; the positive class contains a binding "
+        "site of CTCF, the zinc-finger protein found at the boundaries of chromatin domains."),
+    nt_tasks_official_h3k27ac=(
+        "Nucleotide Transformer benchmark. 1000-nt human genomic windows; the positive class lies in a region "
+        "that carries H3K27ac, the histone acetylation mark of active promoters and enhancers."),
+    rna_dst_splice_site_acceptor=(
+        "RNA downstream-task benchmark. 400-nt pre-mRNA windows from many species; the positive class has a "
+        "splice acceptor site, the intron-to-exon boundary, at its centre."),
+    rna_dst_mean_ribosome_load=(
+        "RNA downstream-task benchmark. 5' untranslated regions of 25 to 100 nt placed before a reporter gene in "
+        "a massively parallel assay in human cells; the target is the mean ribosome load of the reporter mRNA, "
+        "a measure of how actively it is translated."),
+    cds_melting_point=(
+        "Protein-property benchmark. Proteins of several organisms; the target is the melting temperature in "
+        "degrees C, measured by thermal proteome profiling in cells or lysates."),
 )
 
 

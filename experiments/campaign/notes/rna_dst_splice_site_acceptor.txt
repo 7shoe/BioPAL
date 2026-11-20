@@ -1,0 +1,7 @@
+task: rna_dst_splice_site_acceptor
+label: simulated institutional knowledge (author-written from public splicing biology)
+visibility: public
+
+Notes from a splicing group for whoever tunes models on acceptor-site windows.
+1. What the windows look like. The candidate site is in the middle of the 400-nt window: an intron would end with AG at positions 201 and 202, and the exon would start right after. AG alone decides nothing: more than a third of the negative windows have AG at the same place. What marks a real acceptor is the pyrimidine-rich tract in the 20 or so bases before the AG and the branch point further upstream. The windows come from many species, and GC content mostly reflects the genome a window comes from. AT-rich windows come from AT-rich genomes such as plants, nematodes and insects, where introns are U-rich throughout, so a U-rich stretch before an AG is common at false sites too. Overall GC content is the same in both classes and by itself tells nothing.
+2. What we would do about it. If the measurements show a remaining weakness on the AT-rich third, give those rows more weight: there the model has to use the exact spacing and the exon side of the site, not just the tract. We would not put more weight on one class label. We would not single out the low-complexity third either: long pyrimidine runs lower the entropy, so real acceptors with strong tracts fall into it together with plain repeats.

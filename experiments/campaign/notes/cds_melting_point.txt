@@ -1,0 +1,7 @@
+task: cds_melting_point
+label: simulated institutional knowledge (author-written from public protein biophysics)
+visibility: public
+
+Notes from a proteomics group for whoever tunes models on melting temperatures from thermal proteome profiling.
+1. What the target reflects. The proteins come from several organisms and were measured in cells or lysates, not purified. Most melt between 40 and 55 degrees C. About one in ten melts above 70, and in the source atlas those are largely proteins of heat-loving bacteria and archaea. As a group their sequences differ in composition (fewer Q, N, S and T; somewhat more E, K and R), so a model of composition already finds that tail. Within one organism the differences are small, and a measured value also reflects the protein's partners: the members of a stable complex such as the ribosome melt together. Net charge says little about the target; the most basic third holds many ribosomal and nucleic-acid-binding proteins. Mean hydropathy mostly singles out membrane proteins, which this assay measures poorly.
+2. What we would do about it. If the measurements show a remaining weakness on the top third of the target beyond what composition gives, give those rows more weight: the hot tail carries much of the squared error. We would not add weight by hydropathy, and we would expect little from the middle third of the target, where values lie within a few degrees of each other.

@@ -1,0 +1,7 @@
+task: fish_gue_ctcf
+label: simulated institutional knowledge (author-written from public chromatin biology)
+visibility: public
+
+Notes from a chromatin group for whoever tunes models on CTCF windows from fish genomes.
+1. Where composition helps and where it does not. CTCF reads a core motif of about 20 bases that is rich in G and C (the CCCTC in its name is part of it). The site can lie anywhere in the 800-nt window and on either strand. These windows average about 40% GC, and fish genomes vary less in GC content along a chromosome than mammalian ones do, so the GC content of a window says little about binding: bound windows are only slightly GC-richer than unbound ones. What separates the classes is the motif and the bases next to it. A large part of these genomes is repeats (transposons, microsatellites), and the low-complexity windows are mostly such repeats.
+2. What we would do about it. If the measurements show a remaining weakness on one GC third, give those rows more weight. We would expect it on the GC-rich third, where GC-rich stretches that are not the motif are common and the model has to tell the motif from its look-alikes. We would not put more weight on one class label, since both classes are needed to learn that difference, and we would leave the low-complexity third alone: binding calls inside repeats are the least reliable, because sequencing reads map there ambiguously.

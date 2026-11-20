@@ -1,0 +1,7 @@
+task: nt_tasks_official_h3k27ac
+label: simulated institutional knowledge (author-written from public chromatin biology)
+visibility: public
+
+Notes from a gene-regulation group for whoever tunes models on H3K27ac windows.
+1. Where composition helps and where it does not. H3K27ac marks active promoters and active enhancers. Promoter peaks sit on CpG islands, so in the GC-rich third of the windows composition alone finds most positives: about seven in ten windows there are positive, against three in ten in the AT-rich third. Enhancer peaks are not GC-rich. They are recognised by clusters of transcription-factor motifs, and which enhancers are active depends on the cell type the mark was measured in. Those positives are the hard ones, and the sequence cannot explain all of them.
+2. What we would do about it. If the measurements show a remaining weakness on the AT-rich or the middle GC third, give those rows more weight: that is where the model has to learn motifs and their arrangement instead of counting CpGs. We would not add weight to the GC-rich third, where a model of composition is already good, and not to one class label. Low-complexity windows are mostly repeats with unreliable peak calls; we would leave them alone.

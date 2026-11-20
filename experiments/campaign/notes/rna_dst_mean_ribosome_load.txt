@@ -1,0 +1,7 @@
+task: rna_dst_mean_ribosome_load
+label: simulated institutional knowledge (author-written from public translation biology)
+visibility: public
+
+Notes from a translation group for whoever tunes models on the 5'UTR reporter library.
+1. What drives the measurement. The reporter's start codon follows the UTR, so every AUG inside the UTR is an upstream start. An upstream AUG takes ribosomes away and lowers the load, most of all when it is out of frame with the reporter or opens a short upstream reading frame. How much depends on the bases around it (the Kozak context; strongest with a purine three bases before the AUG). About half of the UTRs carry one, and they make up nearly all of the low third of the target. Stable secondary structure also lowers the load, but far less, and GC content alone tracks the target only weakly. The UTRs are 25 to 100 nt long. A short sequence holds few distinct 3-mers, so here the entropy thirds mostly sort by length, not by repetitiveness.
+2. What we would do about it. If the measurements show a remaining weakness on the low third of the target, give those rows more weight: that is where the frame and the context of an upstream AUG have to be learned. We would not add weight to the high third: those UTRs have no upstream start, and what is left to learn there (the bases right before the reporter's start codon, structure) has small effects. Read a weakness on an entropy third as an effect of length.
